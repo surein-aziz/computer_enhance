@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+//TODO(surein): clean up string handling ensuring no memory leaks
+
 struct Bytes {
     u8* buffer = 0; // malloced buffer
     s32 size = 0;
@@ -50,6 +52,36 @@ Bytes append_chars(Bytes bytes, const char* chars)
     return bytes;
 }
 
+void decode_memory(u8 rm, char* str, u16 disp) {
+    if (rm == 0b00000000) {
+        strcpy(str, "[BX + SI");
+    } else if (rm == 0b00000001) {
+        strcpy(str, "[BX + DI");
+    } else if (rm == 0b00000010) {
+        strcpy(str, "[BP + SI");
+    } else if (rm == 0b00000011) {
+        strcpy(str, "[BP + DI");
+    } else if (rm == 0b00000100) {
+        strcpy(str, "[SI");
+    } else if (rm == 0b00000101) {
+        strcpy(str, "[DI");
+    } else if (rm == 0b00000110) {
+        strcpy(str, "[BP");
+    } else if (rm == 0b00000111) {
+        strcpy(str, "[BX");
+    } else {
+        Assert(!"Invalid rm code");
+        return;
+    }
+
+    if (disp > 0) {
+        char* cur = str + strlen(str);
+        sprintf(cur, "+ %d", disp);
+    }
+
+    strcat(str, "]");
+}
+
 const char* decode_register(u8 reg, bool w) 
 {
     if (reg == 0b00000000) {
@@ -80,52 +112,106 @@ char* decode_instruction(Bytes asm_file, int* current) {
         // Register/memory to/from register
 
         // We initially read from two bytes for this instruction
-        u8 byte1 = asm_file.buffer[*current];
+        u8 byte1 = asm_file.buffer[(*current)++];
         bool d = !!(byte1 & 0b00000010);
         bool w = !!(byte1 & 0b00000001);
 
-        u8 byte2 = asm_file.buffer[*current+1];
+        u8 byte2 = asm_file.buffer[(*current)++];
         u8 mod = byte2 & 0b11000000;
-        if (mod != 0b11000000) {
-            // This instruction is not register-to-register. Unsupported for now.
-            Assert(FALSE);
-            return "";
-        }
         u8 reg = byte2 & 0b00111000;
         u8 rm = byte2 & 0b00000111;
 
-        u8 dest = reg >> 3;
-        u8 source = rm;
-        if (!d) {
-            u8 flip = dest;
-            dest = source;
-            source = flip;
+        u8 register_bits = reg >> 3;
+        const char* dest_str = 0;
+        const char* source_str = 0;
+
+        if (mod == 0b11000000) {
+            // Register mode (no displacement)
+
+            if (d) {
+                dest_str = decode_register(register_bits, w);
+                source_str = decode_register(rm, w);
+            } else {
+                source_str = decode_register(register_bits, w);
+                dest_str = decode_register(rm, w);
+            }
+
+        } else if (mod == 0b00000000) {
+            // Memory mode (no displacement except for direct address)
+
+            char memory_str[100]; // 100 should be large enough
+            if (rm == 0b00000110) {
+                // Use direct address. Read 2 more bytes for this.
+                u8 low = asm_file.buffer[(*current)++];
+                u8 high = asm_file.buffer[(*current)++];
+                u16 address = low + (high << 8);
+                strcpy(memory_str, "[");
+                char* num_start = memory_str + strlen(memory_str);
+                sprintf(num_start, "%d", address);
+                strcat(memory_str, "]");
+            } else {
+                decode_memory(rm, memory_str, 0);
+            }
+
+            if (d) {
+                dest_str = decode_register(register_bits, w);
+                source_str = memory_str;
+            } else {
+                source_str = decode_register(register_bits, w);
+                dest_str = memory_str;
+            }
+
+        } else if (mod == 0b01000000) {
+            // Memory mode with 8-bit displacement
+
+            char memory_str[100]; // 100 should be large enough
+            u8 low = asm_file.buffer[(*current)++];
+            decode_memory(rm, memory_str, low);
+            if (d) {
+                dest_str = decode_register(register_bits, w);
+                source_str = memory_str;
+            } else {
+                source_str = decode_register(register_bits, w);
+                dest_str = memory_str;
+            }
+
+        } else {
+            // Memory mode with 16-bit displacement
+            Assert(mod == 0b10000000);
+
+            char memory_str[100]; // 100 should be large enough
+            u8 low = asm_file.buffer[(*current)++];
+            u8 high = asm_file.buffer[(*current)++];
+            u16 disp = low + (high << 8);
+            decode_memory(rm, memory_str, disp);
+            if (d) {
+                dest_str = decode_register(register_bits, w);
+                source_str = memory_str;
+            } else {
+                source_str = decode_register(register_bits, w);
+                dest_str = memory_str;
+            }
+
         }
 
-
+        // Construct disassembly string
         const char* mov_str = "mov ";
-        const char* dest_str = decode_register(dest, w);
         const char* mid_str = ", ";
-        const char* source_str = decode_register(source, w);
         const char* end_str = "\n";
         char* instruction_str = (char*)malloc(sizeof(char)*(strlen(mov_str)+strlen(mid_str)+strlen(end_str)+strlen(dest_str)+strlen(source_str)+1));
-        char* inst_str_cur = instruction_str;
-        memcpy(inst_str_cur, mov_str, sizeof(char)*strlen(mov_str));
-        inst_str_cur += strlen(mov_str);
-        memcpy(inst_str_cur, dest_str, sizeof(char)*strlen(dest_str));
-        inst_str_cur += strlen(dest_str);
-        memcpy(inst_str_cur, mid_str, sizeof(char)*strlen(mid_str));
-        inst_str_cur += strlen(mid_str);
-        memcpy(inst_str_cur, source_str, sizeof(char)*strlen(source_str));
-        inst_str_cur += strlen(source_str);
-        memcpy(inst_str_cur, end_str, sizeof(char)*strlen(end_str));
-        inst_str_cur += strlen(end_str);
-        inst_str_cur[0] = 0;
-
-        (*current) += 2;
-
+        strcpy(instruction_str, mov_str);
+        strcat(instruction_str, dest_str);
+        strcat(instruction_str, mid_str);
+        strcat(instruction_str, source_str);
+        strcat(instruction_str, end_str);
         return instruction_str;
-    } 
+
+    } else if ((asm_file.buffer[*current] & 0b11110000) == 0b10110000) {
+        // Immediate to register
+
+        //TODO: implement this
+        Assert(FALSE);
+    }
 
     // Not supported yet
     Assert(FALSE);
@@ -135,7 +221,6 @@ char* decode_instruction(Bytes asm_file, int* current) {
 // disassemble ASM and output
 void disassemble(Bytes asm_file, const char* output_path)
 {
-    //TODO: complete outputting disassembly
     Bytes output;
     s32 current = 0;
 
@@ -163,11 +248,11 @@ s32 APIENTRY WinMain(HINSTANCE instance,
                      LPTSTR cmd_line,
                      int show)
 {
-    Bytes bytes37 = read_entire_file("../data/listing_0037_single_register_mov");
-    disassemble(bytes37, "../output/listing_0037_out.asm");
+    Bytes bytes37 = read_entire_file("../data/listing_0039_more_movs");
+    disassemble(bytes37, "../output/listing_0039_out.asm");
 
-    Bytes bytes38 = read_entire_file("../data/listing_0038_many_register_mov");
-    disassemble(bytes38, "../output/listing_0038_out.asm");
+    Bytes bytes38 = read_entire_file("../data/listing_0040_challenge_movs");
+    disassemble(bytes38, "../output/listing_0040_out.asm");
 
     return 0;
 }
