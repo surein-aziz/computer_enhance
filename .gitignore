@@ -1,0 +1,6 @@
+*.sln
+*.sdf
+bin
+.vs
+output
+homework.ctm
