@@ -277,6 +277,87 @@ char* decode_instruction(Bytes asm_file, int* current) {
         strcat(instruction_str, source_str);
         strcat(instruction_str, end_str);
         return instruction_str;
+    } else if ((asm_file.buffer[*current] & 0b11111110) == 0b11000110) {
+        // Immediate to register / memory
+
+        // Read first byte
+        u8 byte1 = asm_file.buffer[(*current)++];
+        bool w = !!(byte1 & 0b00000001);
+
+        u8 byte2 = asm_file.buffer[(*current)++];
+        u8 mod = byte2 & 0b11000000;
+        u8 rm = byte2 & 0b00000111;
+
+        const char* dest_str = 0;
+
+        if (mod == 0b11000000) {
+            // Register mode (no displacement)
+
+            dest_str = decode_register(rm, w);
+
+        } else if (mod == 0b00000000) {
+            // Memory mode (no displacement except for direct address)
+
+            char memory_str[100]; // 100 should be large enough
+            if (rm == 0b00000110) {
+                // Use direct address. Read 2 more bytes for this.
+                u8 low = asm_file.buffer[(*current)++];
+                u8 high = asm_file.buffer[(*current)++];
+                u16 address = low + (high << 8);
+                strcpy(memory_str, "[");
+                char* num_start = memory_str + strlen(memory_str);
+                sprintf(num_start, "%d", address);
+                strcat(memory_str, "]");
+            } else {
+                decode_memory(rm, memory_str, 0);
+            }
+            dest_str = memory_str;
+
+        } else if (mod == 0b01000000) {
+            // Memory mode with 8-bit displacement
+
+            char memory_str[100]; // 100 should be large enough
+            u8 low = asm_file.buffer[(*current)++];
+            decode_memory(rm, memory_str, low);
+            dest_str = memory_str;
+
+        } else {
+            // Memory mode with 16-bit displacement
+            Assert(mod == 0b10000000);
+
+            char memory_str[100]; // 100 should be large enough
+            u8 low = asm_file.buffer[(*current)++];
+            u8 high = asm_file.buffer[(*current)++];
+            u16 disp = low | (high << 8);
+            decode_memory(rm, memory_str, disp);
+            dest_str = memory_str;
+        }
+
+        // Get more bytes for the immediate
+        char source_str[100];
+
+        // Read first data byte
+        u16 data = asm_file.buffer[(*current)++];
+        if (w) {
+            // There's a second data byte
+            data |= asm_file.buffer[(*current)++] << 8;
+            sprintf(source_str, "word %d", data);
+        } else {
+            sprintf(source_str, "byte %d", data);
+        }
+
+
+        // Construct disassembly string
+        const char* mov_str = "mov ";
+        const char* mid_str = ", ";
+        const char* end_str = "\n";
+        char* instruction_str = (char*)malloc(sizeof(char)*(strlen(mov_str)+strlen(mid_str)+strlen(end_str)+strlen(dest_str)+strlen(source_str)+1));
+        strcpy(instruction_str, mov_str);
+        strcat(instruction_str, dest_str);
+        strcat(instruction_str, mid_str);
+        strcat(instruction_str, source_str);
+        strcat(instruction_str, end_str);
+        return instruction_str;
     }
 
     // Not supported yet
