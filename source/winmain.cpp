@@ -209,8 +209,33 @@ char* decode_instruction(Bytes asm_file, int* current) {
     } else if ((asm_file.buffer[*current] & 0b11110000) == 0b10110000) {
         // Immediate to register
 
-        //TODO: implement this
-        Assert(FALSE);
+        // Read first byte
+        u8 byte1 = asm_file.buffer[(*current)++];
+        bool w = !!(byte1 & 0b00001000);
+        u8 reg = byte1 & 0b00000111;
+
+        const char* dest_str = decode_register(reg, w);
+        char source_str[100];
+
+        // Read first data byte
+        u16 data = asm_file.buffer[(*current)++];
+        if (w) {
+            // There's a second data byte
+            data &= asm_file.buffer[(*current)++] << 8;
+        }
+        sprintf(source_str, "%d", data);
+
+        // Construct disassembly string
+        const char* mov_str = "mov ";
+        const char* mid_str = ", ";
+        const char* end_str = "\n";
+        char* instruction_str = (char*)malloc(sizeof(char)*(strlen(mov_str)+strlen(mid_str)+strlen(end_str)+strlen(dest_str)+strlen(source_str)+1));
+        strcpy(instruction_str, mov_str);
+        strcat(instruction_str, dest_str);
+        strcat(instruction_str, mid_str);
+        strcat(instruction_str, source_str);
+        strcat(instruction_str, end_str);
+        return instruction_str;
     }
 
     // Not supported yet
