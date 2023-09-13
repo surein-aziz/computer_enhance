@@ -182,7 +182,7 @@ char* decode_instruction(Bytes asm_file, int* current) {
             char memory_str[100]; // 100 should be large enough
             u8 low = asm_file.buffer[(*current)++];
             u8 high = asm_file.buffer[(*current)++];
-            u16 disp = low + (high << 8);
+            u16 disp = low | (high << 8);
             decode_memory(rm, memory_str, disp);
             if (d) {
                 dest_str = decode_register(register_bits, w);
@@ -224,6 +224,47 @@ char* decode_instruction(Bytes asm_file, int* current) {
             data |= asm_file.buffer[(*current)++] << 8;
         }
         sprintf(source_str, "%d", data);
+
+        // Construct disassembly string
+        const char* mov_str = "mov ";
+        const char* mid_str = ", ";
+        const char* end_str = "\n";
+        char* instruction_str = (char*)malloc(sizeof(char)*(strlen(mov_str)+strlen(mid_str)+strlen(end_str)+strlen(dest_str)+strlen(source_str)+1));
+        strcpy(instruction_str, mov_str);
+        strcat(instruction_str, dest_str);
+        strcat(instruction_str, mid_str);
+        strcat(instruction_str, source_str);
+        strcat(instruction_str, end_str);
+        return instruction_str;
+    } else if ((asm_file.buffer[*current] & 0b11111100) == 0b10100000) {
+        // Accumulator to memory / memory to accumulator
+
+        // Read first byte
+        u8 byte1 = asm_file.buffer[(*current)++];
+        bool d = !!(byte1 & 0b00000010);
+        bool w = !!(byte1 & 0b00000001);
+
+        u8 addr_lo = asm_file.buffer[(*current)++];
+        u8 addr_hi = asm_file.buffer[(*current)++];
+        u16 addr = addr_lo | (addr_hi << 8);
+
+        const char* reg_str = w ? "AX" : "AL";
+
+        char memory_str[100];
+        strcpy(memory_str, "[");
+        char* num_start = memory_str + strlen(memory_str);
+        sprintf(num_start, "%d", addr);
+        strcat(memory_str, "]");
+
+        const char* dest_str = 0;
+        const char* source_str = 0;
+        if (d) {
+            dest_str = memory_str;
+            source_str = reg_str;
+        } else {
+            dest_str = reg_str;
+            source_str = memory_str;
+        }
 
         // Construct disassembly string
         const char* mov_str = "mov ";
