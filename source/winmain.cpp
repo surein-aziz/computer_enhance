@@ -76,7 +76,7 @@ void decode_memory(u8 rm, char* str, u16 disp) {
 
     if (disp > 0) {
         char* cur = str + strlen(str);
-        sprintf(cur, "+ %d", disp);
+        sprintf(cur, " + %d", disp);
     }
 
     strcat(str, "]");
@@ -221,7 +221,7 @@ char* decode_instruction(Bytes asm_file, int* current) {
         u16 data = asm_file.buffer[(*current)++];
         if (w) {
             // There's a second data byte
-            data &= asm_file.buffer[(*current)++] << 8;
+            data |= asm_file.buffer[(*current)++] << 8;
         }
         sprintf(source_str, "%d", data);
 
@@ -276,8 +276,8 @@ s32 APIENTRY WinMain(HINSTANCE instance,
     Bytes bytes37 = read_entire_file("../data/listing_0039_more_movs");
     disassemble(bytes37, "../output/listing_0039_out.asm");
 
-    Bytes bytes38 = read_entire_file("../data/listing_0040_challenge_movs");
-    disassemble(bytes38, "../output/listing_0040_out.asm");
+    //Bytes bytes38 = read_entire_file("../data/listing_0040_challenge_movs");
+    //disassemble(bytes38, "../output/listing_0040_out.asm");
 
     return 0;
 }
