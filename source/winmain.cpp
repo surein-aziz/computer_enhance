@@ -52,7 +52,7 @@ Bytes append_chars(Bytes bytes, const char* chars)
     return bytes;
 }
 
-void decode_memory(u8 rm, char* str, u16 disp) {
+void decode_memory(u8 rm, char* str, s16 disp) {
     if (rm == 0b00000000) {
         strcpy(str, "[BX + SI");
     } else if (rm == 0b00000001) {
@@ -77,6 +77,10 @@ void decode_memory(u8 rm, char* str, u16 disp) {
     if (disp > 0) {
         char* cur = str + strlen(str);
         sprintf(cur, " + %d", disp);
+    } else if (disp < 0) {
+        s32 big_disp = disp;
+        char* cur = str + strlen(str);
+        sprintf(cur, " - %d", -big_disp);
     }
 
     strcat(str, "]");
@@ -166,7 +170,7 @@ char* decode_instruction(Bytes asm_file, int* current) {
 
             char memory_str[100]; // 100 should be large enough
             u8 low = asm_file.buffer[(*current)++];
-            decode_memory(rm, memory_str, low);
+            decode_memory(rm, memory_str, (s8)low);
             if (d) {
                 dest_str = decode_register(register_bits, w);
                 source_str = memory_str;
@@ -183,7 +187,7 @@ char* decode_instruction(Bytes asm_file, int* current) {
             u8 low = asm_file.buffer[(*current)++];
             u8 high = asm_file.buffer[(*current)++];
             u16 disp = low | (high << 8);
-            decode_memory(rm, memory_str, disp);
+            decode_memory(rm, memory_str, (s16)disp);
             if (d) {
                 dest_str = decode_register(register_bits, w);
                 source_str = memory_str;
@@ -318,7 +322,7 @@ char* decode_instruction(Bytes asm_file, int* current) {
 
             char memory_str[100]; // 100 should be large enough
             u8 low = asm_file.buffer[(*current)++];
-            decode_memory(rm, memory_str, low);
+            decode_memory(rm, memory_str, (s8)low);
             dest_str = memory_str;
 
         } else {
@@ -329,7 +333,7 @@ char* decode_instruction(Bytes asm_file, int* current) {
             u8 low = asm_file.buffer[(*current)++];
             u8 high = asm_file.buffer[(*current)++];
             u16 disp = low | (high << 8);
-            decode_memory(rm, memory_str, disp);
+            decode_memory(rm, memory_str, (s16)disp);
             dest_str = memory_str;
         }
 
@@ -398,8 +402,8 @@ s32 APIENTRY WinMain(HINSTANCE instance,
     Bytes bytes37 = read_entire_file("../data/listing_0039_more_movs");
     disassemble(bytes37, "../output/listing_0039_out.asm");
 
-    //Bytes bytes38 = read_entire_file("../data/listing_0040_challenge_movs");
-    //disassemble(bytes38, "../output/listing_0040_out.asm");
+    Bytes bytes38 = read_entire_file("../data/listing_0040_challenge_movs");
+    disassemble(bytes38, "../output/listing_0040_out.asm");
 
     return 0;
 }
