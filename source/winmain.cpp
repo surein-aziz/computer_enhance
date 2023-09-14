@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 //TODO(surein): clean up string handling ensuring no memory leaks
+//TODO(surein): compelte disassembler sufficiently to complete listing 42
 
 struct Bytes {
     u8* buffer = 0; // malloced buffer
@@ -194,7 +195,8 @@ void extract_dwmodregrm(Bytes asm_file, int* current, char* dest_str, char* sour
 }
 
 // dest_str / source_str must be large-enough buffers
-void extract_wmodrm(Bytes asm_file, int* current, char* dest_str, char* source_str) {
+// s is an optional signed bit. set to false if not relevant
+void extract_wmodrm(Bytes asm_file, int* current, bool s, char* dest_str, char* source_str) {
     // Read first byte
     u8 byte1 = asm_file.buffer[(*current)++];
     bool w = !!(byte1 & 0b00000001);
@@ -250,13 +252,19 @@ void extract_wmodrm(Bytes asm_file, int* current, char* dest_str, char* source_s
     char data_str[100];
 
     // Read first data byte
-    u16 data = asm_file.buffer[(*current)++];
-    if (w) {
+    u8 data8 = asm_file.buffer[(*current)++];
+    if (w && !s) {
         // There's a second data byte
-        data |= asm_file.buffer[(*current)++] << 8;
-        sprintf(data_str, "word %d", data);
-    } else {
-        sprintf(data_str, "byte %d", data);
+        u16 data16;
+        data16 |= asm_file.buffer[(*current)++] << 8;
+        sprintf(data_str, "word %d", data16);
+    } else if (w && s) {
+        s16 data16 = (s8)data8;
+        sprintf(data_str, "word %d", data16);
+    } else if (!w && !s) {
+        sprintf(data_str, "byte %d", data8);
+    } else if (!w && s) {
+        sprintf(data_str, "byte %d", (s8)data8);
     }
     strcpy(source_str, data_str);
 }
@@ -272,6 +280,20 @@ char* instruction_line(const char* instruction, const char* dest_str, const char
     strcat(instruction_str, source_str);
     strcat(instruction_str, end_str);
     return instruction_str;
+}
+
+const char* get_subvariant(u8 code) {
+    if (code == 0b00000000) {
+        return "add ";
+    } else if (code == 0b00101000) {
+        return "sub ";
+    } else if (code == 0b00111000) {
+        return "cmp ";
+    } else {
+        // Not supported yet
+        Assert(FALSE);
+        return "";
+    }
 }
 
 // Returns malloced char
@@ -341,8 +363,44 @@ char* decode_instruction(Bytes asm_file, int* current) {
 
         char dest_str[100];
         char source_str[100];
-        extract_wmodrm(asm_file, current, dest_str, source_str);
+        extract_wmodrm(asm_file, current, false, dest_str, source_str);
         return instruction_line("mov ", dest_str, source_str);
+    } else if ((asm_file.buffer[*current] & 0b11000100) == 0b00000000) {
+        // Some subvariant of reg/memory and register to either
+
+        const char* instruction_str = get_subvariant(asm_file.buffer[*current] & 0b00111000);
+
+        char dest_str[100];
+        char source_str[100];
+        extract_dwmodregrm(asm_file, current, dest_str, source_str);
+        return instruction_line(instruction_str, dest_str, source_str);
+    } else if  ((asm_file.buffer[*current] & 0b11111100) == 0b10000000) {
+        // Some subvariant of immediate to register / memory
+
+        bool s = !!(asm_file.buffer[*current] & 0b00000010);
+        const char* instruction_str = get_subvariant(asm_file.buffer[*current+1] & 0b00111000);
+
+        char dest_str[100];
+        char source_str[100];
+        extract_wmodrm(asm_file, current, s, dest_str, source_str);
+        return instruction_line(instruction_str, dest_str, source_str);
+    } else if ((asm_file.buffer[*current] & 0b11000110) == 0b00000100) {
+        // Some subvariant of immediate to accumulator
+
+        const char* instruction_str = get_subvariant(asm_file.buffer[*current] & 0b00111000);
+        bool w = !!(asm_file.buffer[*current] & 0b00000001);
+        (*current)++;
+
+        char source_str[100];
+        // Read first data byte
+        u16 data = asm_file.buffer[(*current)++];
+        if (w) {
+            // There's a second data byte
+            data |= asm_file.buffer[(*current)++] << 8;
+        }
+        sprintf(source_str, "%d", data);
+        const char* dest_str = w ? "AX" : "AL";
+        return instruction_line(instruction_str, dest_str, source_str);
     }
 
     // Not supported yet
