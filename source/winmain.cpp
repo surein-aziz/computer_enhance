@@ -6,6 +6,8 @@
 //TODO(surein): clean up string handling ensuring no memory leaks
 //TODO(surein): compelte disassembler sufficiently to complete listing 42
 
+#define MAX_LABELS 1000
+
 struct Bytes {
     u8* buffer = 0; // malloced buffer
     s32 size = 0;
@@ -282,12 +284,15 @@ char* instruction_line(const char* instruction, const char* dest_str, const char
     return instruction_str;
 }
 
-char* instruction_line_offset(const char* instruction, s8 offset) {
+char* instruction_line_offset(const char* instruction, const char* label_str, s8 offset) {
+    const char* mid_str = " ; ";
     const char* end_str = "\n";
     char offset_str[20];
     sprintf(offset_str, "%d", offset);
-    char* instruction_str = (char*)malloc(sizeof(char)*(strlen(instruction)+strlen(end_str)+strlen(offset_str)+1));
+    char* instruction_str = (char*)malloc(sizeof(char)*(strlen(instruction)+strlen(end_str)+strlen(mid_str) + strlen(label_str) + strlen(offset_str)+1));
     strcpy(instruction_str, instruction);
+    strcat(instruction_str, label_str);
+    strcat(instruction_str, mid_str); 
     strcat(instruction_str, offset_str);
     strcat(instruction_str, end_str);
     return instruction_str;
@@ -307,8 +312,29 @@ const char* get_subvariant(u8 code) {
     }
 }
 
+void get_label(char* label_str, s32 current, s8 offset, s32* label_indices, s32* label_count) {
+    strcpy(label_str, "label_");
+    s32 location = current + offset;
+    for (s32 i = 0; i < *label_count; ++i) {
+        if (label_indices[i] == location) {
+            char num_str[20];
+            sprintf(num_str, "%d", i+1);
+            strcat(label_str, num_str);
+            return;
+        }
+    }
+    if (*label_count >= MAX_LABELS) {
+        Assert(!"Too many labels.");
+        return;
+    }
+    char num_str[20];
+    sprintf(num_str, "%d", *label_count+1);
+    strcat(label_str, num_str);
+    label_indices[(*label_count)++] = location;
+}
+
 // Returns malloced char
-char* decode_instruction(Bytes asm_file, int* current) {
+char* decode_instruction(Bytes asm_file, s32* current, s32* label_indices, s32* label_count) {
 
     if ((asm_file.buffer[*current] & 0b11111100) == 0b10001000) {
         // MOV register/memory to/from register
@@ -416,107 +442,172 @@ char* decode_instruction(Bytes asm_file, int* current) {
         // JE
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("je ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("je ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01111100) {
         // JL
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jl ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jl ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01111110) {
         // JLE
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jle ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jle ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01110010) {
         // JB
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jb ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jb ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01110110) {
         // JBE
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jbe ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jbe ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01111010) {
         // JP
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jp ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jp ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01110000) {
         // JO
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jo ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jo ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01111000) {
         // JS
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("js ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("js ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01110101) {
         // JNE
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jne ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jne ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01111101) {
         // JNL
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jnl ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jnl ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01111111) {
         // JG
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jg ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jg ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01110011) {
         // JNB
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jnb ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jnb ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01110111) {
         // JA
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("ja ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("ja ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01111011) {
         // JNP
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jnp ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jnp ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01110001) {
         // JNO
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jno ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jno ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b01111001) {
         // JNS
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jns ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jns ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b11100010) {
         // LOOP
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("loop ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("loop ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b11100001) {
         // LOOPZ
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("loopz ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("loopz ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b11100000) {
         // LOOPNZ
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("loopnz ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("loopnz ", label_str, offset);
     } else if (asm_file.buffer[*current] == 0b11100011) {
         // JCXZ
         (*current)++;
         s8 offset = (s8)asm_file.buffer[(*current)++];
-        return instruction_line_offset("jcxz ", offset);
+        char label_str[100];
+        get_label(label_str, *current, offset, label_indices, label_count);
+        return instruction_line_offset("jcxz ", label_str, offset);
     }
 
     // Not supported yet
     Assert(FALSE);
     return "";
+}
+
+Bytes insert_label_at_line(Bytes bytes, s32 label_num, s32 line_num) {
+    u8* old_buffer = bytes.buffer;
+    s32 old_size = bytes.size;
+    char label_str[100];
+    sprintf(label_str, "label_%d:\n", label_num);
+    s32 length = (s32)strlen(label_str);
+    bytes.size = bytes.size + length;
+    bytes.buffer = (u8*)malloc(bytes.size);
+
+    s32 insert_point = 0;
+    s32 cur_line = 0;
+    while (cur_line < line_num) {
+        if (old_buffer[insert_point++] == '\n') {
+            cur_line++;
+        }
+    }
+
+    memcpy(bytes.buffer, old_buffer, insert_point);
+    memcpy(bytes.buffer+insert_point, (u8*)label_str, length);
+    memcpy(bytes.buffer+insert_point+length, old_buffer+insert_point, old_size-insert_point);
+    free(old_buffer);
+
+    return bytes;
 }
 
 // disassemble ASM and output
@@ -525,22 +616,60 @@ void disassemble(Bytes asm_file, const char* output_path)
     Bytes output;
     s32 current = 0;
 
+    // Save number of bytes output for each instruction
+    s32* instruction_bytes = (s32*)malloc(asm_file.size*sizeof(s32));
+    s32 instruction_count = 0;
+
+    // Save index of each label found.
+    s32* label_indices = (s32*)malloc(MAX_LABELS*sizeof(s32));
+    s32 label_count = 0;
+
     const char* preamble = "bits 16\n";
     output = append_chars(output, preamble);
     
     while (current < asm_file.size) {
-        s32 check_progress = current;
-        char* instruction_str = decode_instruction(asm_file, &current);
-        if (current == check_progress) {
+        s32 prev = current;
+
+        char* instruction_str = decode_instruction(asm_file, &current, label_indices, &label_count);
+        if (current == prev) {
             Assert(!"Decode failed.");
             break;
         }
+        instruction_bytes[instruction_count++] = current-prev;
 
         output = append_chars(output, instruction_str);
         free(instruction_str);
     }
 
-    
+    // Insert labels
+    //TODO(surein): clean this up. Currently depends on stuff like existence of preamble line / empty lines and is slow.
+    for (s32 i = 0; i < label_count; ++i) {
+        s32 total_bytes = 0;
+        bool inserted = false;
+        for (s32 j = 0; j < instruction_count; ++j) {
+            if (label_indices[i] == total_bytes) {
+                // Insert label (i+1) at (j+i+1)th line (+1 from preamble)
+                s32 line = j + 1;
+                for (int k = 0; k < i; ++k) {
+                    if (label_indices[k] < label_indices[i]) {
+                        line++; // One line further due to previously inserted labels
+                    }
+                }
+                output = insert_label_at_line(output, i+1, line);
+                inserted = true;
+                break;
+            }
+            total_bytes += instruction_bytes[j];
+        }
+        if (!inserted) {
+            Assert(!"Failed to match up labels.");
+            return;
+        }
+    }
+
+    free(instruction_bytes);
+    free(label_indices);
+
     write_entire_file(output, output_path);
 }
 
@@ -549,11 +678,14 @@ s32 APIENTRY WinMain(HINSTANCE instance,
                      LPTSTR cmd_line,
                      int show)
 {
-    Bytes bytes37 = read_entire_file("../data/listing_0039_more_movs");
-    disassemble(bytes37, "../output/listing_0039_out.asm");
+    Bytes bytes39 = read_entire_file("../data/listing_0039_more_movs");
+    disassemble(bytes39, "../output/listing_0039_out.asm");
 
-    Bytes bytes38 = read_entire_file("../data/listing_0040_challenge_movs");
-    disassemble(bytes38, "../output/listing_0040_out.asm");
+    Bytes bytes40 = read_entire_file("../data/listing_0040_challenge_movs");
+    disassemble(bytes40, "../output/listing_0040_out.asm");
+
+    Bytes bytes41 = read_entire_file("../data/listing_0041_add_sub_cmp_jnz");
+    disassemble(bytes41, "../output/listing_0041_out.asm");
 
     return 0;
 }
