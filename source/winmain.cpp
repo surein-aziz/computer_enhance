@@ -282,6 +282,17 @@ char* instruction_line(const char* instruction, const char* dest_str, const char
     return instruction_str;
 }
 
+char* instruction_line_offset(const char* instruction, s8 offset) {
+    const char* end_str = "\n";
+    char offset_str[20];
+    sprintf(offset_str, "%d", offset);
+    char* instruction_str = (char*)malloc(sizeof(char)*(strlen(instruction)+strlen(end_str)+strlen(offset_str)+1));
+    strcpy(instruction_str, instruction);
+    strcat(instruction_str, offset_str);
+    strcat(instruction_str, end_str);
+    return instruction_str;
+}
+
 const char* get_subvariant(u8 code) {
     if (code == 0b00000000) {
         return "add ";
@@ -401,6 +412,106 @@ char* decode_instruction(Bytes asm_file, int* current) {
         sprintf(source_str, "%d", data);
         const char* dest_str = w ? "AX" : "AL";
         return instruction_line(instruction_str, dest_str, source_str);
+    } else if (asm_file.buffer[*current] == 0b01110100) {
+        // JE
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("je ", offset);
+    } else if (asm_file.buffer[*current] == 0b01111100) {
+        // JL
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jl ", offset);
+    } else if (asm_file.buffer[*current] == 0b01111110) {
+        // JLE
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jle ", offset);
+    } else if (asm_file.buffer[*current] == 0b01110010) {
+        // JB
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jb ", offset);
+    } else if (asm_file.buffer[*current] == 0b01110110) {
+        // JBE
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jbe ", offset);
+    } else if (asm_file.buffer[*current] == 0b01111010) {
+        // JP
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jp ", offset);
+    } else if (asm_file.buffer[*current] == 0b01110000) {
+        // JO
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jo ", offset);
+    } else if (asm_file.buffer[*current] == 0b01111000) {
+        // JS
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("js ", offset);
+    } else if (asm_file.buffer[*current] == 0b01110101) {
+        // JNE
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jne ", offset);
+    } else if (asm_file.buffer[*current] == 0b01111101) {
+        // JNL
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jnl ", offset);
+    } else if (asm_file.buffer[*current] == 0b01111111) {
+        // JG
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jg ", offset);
+    } else if (asm_file.buffer[*current] == 0b01110011) {
+        // JNB
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jnb ", offset);
+    } else if (asm_file.buffer[*current] == 0b01110111) {
+        // JA
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("ja ", offset);
+    } else if (asm_file.buffer[*current] == 0b01111011) {
+        // JNP
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jnp ", offset);
+    } else if (asm_file.buffer[*current] == 0b01110001) {
+        // JNO
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jno ", offset);
+    } else if (asm_file.buffer[*current] == 0b01111001) {
+        // JNS
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jns ", offset);
+    } else if (asm_file.buffer[*current] == 0b11100010) {
+        // LOOP
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("loop ", offset);
+    } else if (asm_file.buffer[*current] == 0b11100001) {
+        // LOOPZ
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("loopz ", offset);
+    } else if (asm_file.buffer[*current] == 0b11100000) {
+        // LOOPNZ
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("loopnz ", offset);
+    } else if (asm_file.buffer[*current] == 0b11100011) {
+        // JCXZ
+        (*current)++;
+        s8 offset = (s8)asm_file.buffer[(*current)++];
+        return instruction_line_offset("jcxz ", offset);
     }
 
     // Not supported yet
