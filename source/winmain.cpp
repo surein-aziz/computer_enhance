@@ -257,7 +257,7 @@ void extract_wmodrm(Bytes asm_file, int* current, bool s, char* dest_str, char* 
     u8 data8 = asm_file.buffer[(*current)++];
     if (w && !s) {
         // There's a second data byte
-        u16 data16;
+        u16 data16 = data8;
         data16 |= asm_file.buffer[(*current)++] << 8;
         sprintf(data_str, "word %d", data16);
     } else if (w && s) {
