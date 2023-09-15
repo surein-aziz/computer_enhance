@@ -7,6 +7,7 @@
 //TODO(surein): compelte disassembler sufficiently to complete listing 42
 
 #define MAX_LABELS 1000
+#define MAX_LINES 10000
 
 struct Bytes {
     u8* buffer = 0; // malloced buffer
@@ -585,29 +586,10 @@ char* decode_instruction(Bytes asm_file, s32* current, s32* label_indices, s32* 
     return "";
 }
 
-Bytes insert_label_at_line(Bytes bytes, s32 label_num, s32 line_num) {
-    u8* old_buffer = bytes.buffer;
-    s32 old_size = bytes.size;
-    char label_str[100];
+char* get_label_line(s32 label_num) {
+    char* label_str = (char*)malloc(100*sizeof(char*));
     sprintf(label_str, "label_%d:\n", label_num);
-    s32 length = (s32)strlen(label_str);
-    bytes.size = bytes.size + length;
-    bytes.buffer = (u8*)malloc(bytes.size);
-
-    s32 insert_point = 0;
-    s32 cur_line = 0;
-    while (cur_line < line_num) {
-        if (old_buffer[insert_point++] == '\n') {
-            cur_line++;
-        }
-    }
-
-    memcpy(bytes.buffer, old_buffer, insert_point);
-    memcpy(bytes.buffer+insert_point, (u8*)label_str, length);
-    memcpy(bytes.buffer+insert_point+length, old_buffer+insert_point, old_size-insert_point);
-    free(old_buffer);
-
-    return bytes;
+    return label_str;
 }
 
 // disassemble ASM and output
@@ -624,49 +606,47 @@ void disassemble(Bytes asm_file, const char* output_path)
     s32* label_indices = (s32*)malloc(MAX_LABELS*sizeof(s32));
     s32 label_count = 0;
 
-    const char* preamble = "bits 16\n";
-    output = append_chars(output, preamble);
+    char** instruction_lines = (char**)malloc(MAX_LINES*sizeof(char*));
+    int line_count = 0;
     
     while (current < asm_file.size) {
         s32 prev = current;
 
-        char* instruction_str = decode_instruction(asm_file, &current, label_indices, &label_count);
+        instruction_lines[line_count++] = decode_instruction(asm_file, &current, label_indices, &label_count);
+        Assert(line_count < MAX_LINES);
         if (current == prev) {
             Assert(!"Decode failed.");
             break;
         }
         instruction_bytes[instruction_count++] = current-prev;
-
-        output = append_chars(output, instruction_str);
-        free(instruction_str);
     }
 
-    // Insert labels
-    //TODO(surein): clean this up. Currently depends on stuff like existence of preamble line / empty lines and is slow.
-    for (s32 i = 0; i < label_count; ++i) {
-        s32 total_bytes = 0;
-        bool inserted = false;
-        for (s32 j = 0; j < instruction_count; ++j) {
-            if (label_indices[i] == total_bytes) {
-                // Insert label (i+1) at (j+i+1)th line (+1 from preamble)
-                s32 line = j + 1;
-                for (int k = 0; k < i; ++k) {
-                    if (label_indices[k] < label_indices[i]) {
-                        line++; // One line further due to previously inserted labels
-                    }
-                }
-                output = insert_label_at_line(output, i+1, line);
-                inserted = true;
-                break;
+    // Output to bytes ready to be output to file.
+    const char* preamble = "bits 16\n";
+    output = append_chars(output, preamble);
+
+    s32 labels_inserted = 0; // All labels should be inserted. Debugging check.
+    s32 total_bytes = 0; // Keep track number of input bytes corresponding to instructions output so far.
+    for (int i = 0; i < instruction_count; ++i) {
+        output = append_chars(output, instruction_lines[i]);
+        free(instruction_lines[i]);
+
+        total_bytes += instruction_bytes[i];
+        // Insert label if required
+        //TODO(surein): checking every label after every instruction is needlessly inefficient
+        for (s32 j = 0; j < label_count; ++j) {
+            if (label_indices[j] == total_bytes) {
+                char* label_line = get_label_line(j+1);
+                output = append_chars(output, label_line);
+                free(label_line);
+                labels_inserted++;
             }
-            total_bytes += instruction_bytes[j];
-        }
-        if (!inserted) {
-            Assert(!"Failed to match up labels.");
-            return;
         }
     }
+    Assert(labels_inserted == label_count);
 
+
+    free(instruction_lines);
     free(instruction_bytes);
     free(label_indices);
 
