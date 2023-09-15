@@ -592,6 +592,18 @@ char* get_label_line(s32 label_num) {
     return label_str;
 }
 
+s32 get_next_label_index(s32 total_bytes, s32 label_count, s32* label_indices) {
+    int next = -1;
+    int min_dist = INT_MAX;
+    for (int i = 0; i < label_count; ++i) {
+        if (label_indices[i] > total_bytes && (label_indices[i]-total_bytes) < min_dist) {
+            next = i;
+            min_dist = label_indices[i]-total_bytes;
+        }
+    }
+    return next;
+}
+
 // disassemble ASM and output
 void disassemble(Bytes asm_file, const char* output_path)
 {
@@ -627,20 +639,19 @@ void disassemble(Bytes asm_file, const char* output_path)
 
     s32 labels_inserted = 0; // All labels should be inserted. Debugging check.
     s32 total_bytes = 0; // Keep track number of input bytes corresponding to instructions output so far.
+    s32 next_label_index = get_next_label_index(total_bytes, label_count, label_indices);
     for (int i = 0; i < instruction_count; ++i) {
         output = append_chars(output, instruction_lines[i]);
         free(instruction_lines[i]);
 
         total_bytes += instruction_bytes[i];
         // Insert label if required
-        //TODO(surein): checking every label after every instruction is needlessly inefficient
-        for (s32 j = 0; j < label_count; ++j) {
-            if (label_indices[j] == total_bytes) {
-                char* label_line = get_label_line(j+1);
-                output = append_chars(output, label_line);
-                free(label_line);
-                labels_inserted++;
-            }
+        if (next_label_index >= 0 && total_bytes == label_indices[next_label_index]) {
+            char* label_line = get_label_line(next_label_index+1);
+            output = append_chars(output, label_line);
+            free(label_line);
+            labels_inserted++;
+            next_label_index = get_next_label_index(total_bytes, label_count, label_indices);
         }
     }
     Assert(labels_inserted == label_count);
