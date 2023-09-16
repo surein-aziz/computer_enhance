@@ -10,9 +10,6 @@
 //TODO(surein): clean up string handling ensuring no memory leaks
 //TODO(surein): complete disassembler sufficiently to complete listing 42
 
-#define MAX_LABELS 1000
-#define MAX_LINES 10000
-
 void write_entire_file(Bytes bytes, const char* file_path)
 {
     FILE* file = fopen(file_path, "wb");
