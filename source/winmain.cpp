@@ -71,22 +71,31 @@ s32 get_next_label_index(s32 total_bytes, s32 label_count, s32* label_indices) {
 }
 
 // Get instruction line string given substrings. Returns malloced ptr.
-char* instruction_line(const char* instruction, const char* operand0, const char* operand1) {
+char* instruction_line(const char* instruction, const char* operand0, const char* operand1, char* log_str) {
     const char* space_str = " ";
     const char* mid_str = ", ";
     const char* end_str = "\n";
-    char* instruction_str = (char*)malloc(sizeof(char)*(strlen(instruction)+strlen(space_str)+strlen(mid_str)+strlen(end_str)+strlen(operand0)+strlen(operand1)+1));
+    const char* separate_str = " ; ";
+    u64 len = strlen(instruction)+strlen(space_str)+strlen(mid_str)+strlen(end_str)+strlen(operand0)+strlen(operand1) + 1;
+    if (log_str) {
+        len += strlen(log_str) + strlen(separate_str);
+    }
+    char* instruction_str = (char*)malloc(sizeof(char)*(len));
     strcpy(instruction_str, instruction);
     strcat(instruction_str, space_str);
     strcat(instruction_str, operand0);
     strcat(instruction_str, mid_str);
     strcat(instruction_str, operand1);
+    if (log_str) {
+        strcat(instruction_str, separate_str);
+        strcat(instruction_str, log_str);
+    }
     strcat(instruction_str, end_str);
     return instruction_str;
 }
 
 // Get instruction line string given substrings for a conditional jump. Returns malloced ptr.
-char* instruction_line_jump(const char* instruction, s8 offset, s32 label) {
+char* instruction_line_jump(const char* instruction, s8 offset, s32 label, char* log_str) {
     char offset_str[20];
     sprintf(offset_str, "%d", offset);
     char label_str[100];
@@ -95,12 +104,20 @@ char* instruction_line_jump(const char* instruction, s8 offset, s32 label) {
     const char* space_str = " ";
     const char* mid_str = " ; ";
     const char* end_str = "\n";
-    char* instruction_str = (char*)malloc(sizeof(char)*(strlen(instruction)+strlen(space_str)+strlen(end_str)+strlen(mid_str) + strlen(label_str) + strlen(offset_str)+1));
+    u64 len = strlen(instruction)+strlen(space_str)+strlen(end_str)+strlen(mid_str) + strlen(label_str) + strlen(offset_str)+1;
+    if (log_str) {
+        len += strlen(log_str) + strlen(mid_str);
+    }
+    char* instruction_str = (char*)malloc(sizeof(char)*(len));
     strcpy(instruction_str, instruction);
     strcat(instruction_str, space_str);
     strcat(instruction_str, label_str);
     strcat(instruction_str, mid_str); 
     strcat(instruction_str, offset_str);
+    if (log_str) {
+        strcat(instruction_str, mid_str);
+        strcat(instruction_str, log_str);
+    }
     strcat(instruction_str, end_str);
     return instruction_str;
 }
@@ -139,8 +156,8 @@ const char* instruction_str(InstrType type) {
     return "";
 }
 
-const char* reg_str(Register type) {
-    switch (type) {
+const char* reg_str(Register reg) {
+    switch (reg) {
         case Register::AX: return "AX";
         case Register::AL: return "AL";
         case Register::AH: return "AH";
@@ -234,7 +251,7 @@ char* operand_str(Operand operand) {
     return 0;
 }
 
-Bytes write_instruction_line(Bytes bytes, Instruction instruction) {
+Bytes write_instruction_line(Bytes bytes, Instruction instruction, char* log_str) {
     char* str = 0;
     switch (instruction.type) {
         case InstrType::MOV:
@@ -244,7 +261,7 @@ Bytes write_instruction_line(Bytes bytes, Instruction instruction) {
             {
                 char* dest_operand = operand_str(instruction.operands[0]);
                 char* source_operand = operand_str(instruction.operands[1]);
-                str = instruction_line(instruction_str(instruction.type), dest_operand, source_operand);
+                str = instruction_line(instruction_str(instruction.type), dest_operand, source_operand, log_str);
                 free(dest_operand);
                 free(source_operand);
                 break;
@@ -271,7 +288,7 @@ Bytes write_instruction_line(Bytes bytes, Instruction instruction) {
         case InstrType::JCXZ: 
             {
                 Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
-                str = instruction_line_jump(instruction_str(instruction.type), instruction.operands[0].offset, instruction.operands[0].label);
+                str = instruction_line_jump(instruction_str(instruction.type), instruction.operands[0].offset, instruction.operands[0].label, log_str);
                 break;
             }
         case InstrType::NONE:
@@ -290,10 +307,156 @@ Bytes write_instruction_line(Bytes bytes, Instruction instruction) {
     return out;
 }
 
+u8* get_register(Register reg, Context* context, u16* bytes) {
+    switch (reg) {
+        case Register::AX:
+            *bytes = 2;
+            return (u8*)&context->ax;
+        case Register::AL:
+            *bytes = 1;
+            return (u8*)&context->ax + 1;
+        case Register::AH:
+            *bytes = 1;
+            return (u8*)&context->ax;
+        case Register::BX:
+            *bytes = 2;
+            return (u8*)&context->bx;
+        case Register::BL:
+            *bytes = 1;
+            return (u8*)&context->bx + 1;
+        case Register::BH:
+            *bytes = 1;
+            return (u8*)&context->bx;
+        case Register::CX:
+            *bytes = 2;
+            return (u8*)&context->cx;
+        case Register::CL:
+            *bytes = 1;
+            return (u8*)&context->cx + 1;
+        case Register::CH:
+            *bytes = 1;
+            return (u8*)&context->cx;
+        case Register::DX:
+            *bytes = 2;
+            return (u8*)&context->dx;
+        case Register::DL:
+            *bytes = 1;
+            return (u8*)&context->dx + 1;
+        case Register::DH:
+            *bytes = 1;
+            return (u8*)&context->dx;
+        case Register::SP:
+            *bytes = 2;
+            return (u8*)&context->sp;
+        case Register::BP:
+            *bytes = 2;
+            return (u8*)&context->bp;
+        case Register::SI:
+            *bytes = 2;
+            return (u8*)&context->si;
+        case Register::DI:
+            *bytes = 2;
+            return (u8*)&context->di;
+        case Register::NONE:
+        case Register::COUNT:
+            break;
+    }
+    Assert(!"Invalid register.");
+    return 0;
+}
+
+char* simulate_instruction(Instruction instruction, Context* context) {
+    if (instruction.type != InstrType::MOV) {
+        Assert(!"Not implemented yet");
+        return 0;
+    }
+    if (instruction.operands[0].type != OperandType::REGISTER) {
+        Assert(!"Not implemented yet");
+        return 0;
+    }
+
+    u16 dest_bytes = 0;
+    u16 source_bytes = 0;
+    u16 bytes = 0;
+    u8 byte1 = 0;
+    u8 byte2 = 0;
+    u8* dest_reg = get_register(instruction.operands[0].reg, context, &dest_bytes);
+    if (instruction.operands[1].type == OperandType::REGISTER) {
+        u8* source_reg = get_register(instruction.operands[1].reg, context, &source_bytes);
+        if (dest_bytes == 2 && source_bytes == 2) {
+            byte1 = source_reg[0];
+            byte2 = source_reg[1];
+            bytes = 2;
+        } else {
+            Assert(dest_bytes >= 1 && source_bytes >= 1);
+            byte1 = source_reg[0];
+            bytes = 1;
+        }
+    } else if (instruction.operands[1].type == OperandType::IMMEDIATE) {
+        s32 immediate = instruction.operands[1].immediate;
+        source_bytes = instruction.operands[1].byte ? 1 : 2;
+        if (dest_bytes == 2 && source_bytes == 2) {
+            byte1 = immediate & 0xFF;
+            byte2 = (immediate >> 8) & 0xFF;
+            bytes = 2;
+        } else {
+            Assert(dest_bytes >= 1 && source_bytes >= 1);
+            byte1 = immediate & 0xFF;
+            bytes = 1;
+        }
+    } else {
+        Assert(!"Not implemented yet");
+        return 0;
+    }
+
+    u16 before = 0;
+    if (bytes == 2) {
+        before = dest_reg[0] | dest_reg[1] << 8;
+    } else {
+        before = dest_reg[0];
+    }
+
+    dest_reg[0] = byte1;
+    if (bytes == 2) {
+        dest_reg[1] = byte2;
+    }
+
+    u16 after = 0;
+    if (bytes == 2) {
+        after = dest_reg[0] | dest_reg[1] << 8;
+    } else {
+        after = dest_reg[0];
+    }
+
+    char* log_str = (char*)malloc(100*sizeof(char));
+    strcpy(log_str, reg_str(instruction.operands[0].reg));
+    sprintf(log_str+strlen(log_str), ":%#06x->%#06x", before, after);
+    return log_str;
+}
+
+Bytes write_end_context(Bytes bytes, Context* context) {
+    char* context_str = (char*)malloc(10000*sizeof(char));
+    strcpy(context_str, "\n");
+    strcat(context_str, "Final registers:\n");
+    sprintf(context_str+strlen(context_str), "      AX: %#06x (%d)\n", context->ax, context->ax);
+    sprintf(context_str+strlen(context_str), "      BX: %#06x (%d)\n", context->bx, context->bx);
+    sprintf(context_str+strlen(context_str), "      CX: %#06x (%d)\n", context->cx, context->cx);
+    sprintf(context_str+strlen(context_str), "      DX: %#06x (%d)\n", context->dx, context->dx);
+    sprintf(context_str+strlen(context_str), "      SP: %#06x (%d)\n", context->sp, context->sp);
+    sprintf(context_str+strlen(context_str), "      BP: %#06x (%d)\n", context->bp, context->bp);
+    sprintf(context_str+strlen(context_str), "      SI: %#06x (%d)\n", context->si, context->si);
+    sprintf(context_str+strlen(context_str), "      DI: %#06x (%d)\n", context->di, context->di);
+
+    Bytes out = append_chars(bytes, context_str);
+    free(context_str);
+    return out;
+}
+
 // disassemble ASM, optionally execute it, and output
 void process(Bytes asm_file, const char* output_path, bool exec)
 {
     Bytes output;
+    Context context;
     s32 current = 0;
 
     // Save number of bytes output for each instruction
@@ -327,7 +490,14 @@ void process(Bytes asm_file, const char* output_path, bool exec)
     s32 total_bytes = 0; // Keep track number of input bytes corresponding to instructions output so far.
     s32 next_label_index = get_next_label_index(total_bytes, label_count, label_indices);
     for (int i = 0; i < instruction_count; ++i) {
-        output = write_instruction_line(output, instructions[i]);
+        char* log_str = 0;
+       if (exec) {
+            log_str = simulate_instruction(instructions[i], &context);
+        }
+        output = write_instruction_line(output, instructions[i], log_str);
+        if (log_str) {
+            free(log_str);
+        }
 
         total_bytes += instruction_bytes[i];
         // Insert label if required
@@ -339,6 +509,11 @@ void process(Bytes asm_file, const char* output_path, bool exec)
             next_label_index = get_next_label_index(total_bytes, label_count, label_indices);
         }
     }
+
+    if (exec) {
+        output = write_end_context(output, &context);
+    }
+
     Assert(labels_inserted == label_count);
 
     free(instructions);
@@ -363,10 +538,13 @@ s32 APIENTRY WinMain(HINSTANCE instance,
     free(bytes.buffer);
     bytes = {};
 
+    //TODO(surein): not implemented yet
+    /*
     bytes = read_entire_file("../data/listing_0045_challenge_register_movs");
     process(bytes, "../output/listing_0045_challenge_register_movs.asm", true);
     free(bytes.buffer);
     bytes = {};
+    */
 
     return 0;
 }

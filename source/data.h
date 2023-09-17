@@ -6,6 +6,18 @@ struct Bytes {
     s32 size = 0;
 };
 
+// Store simulated processor context
+struct Context {
+    u16 ax = 0;
+    u16 bx = 0;
+    u16 cx = 0;
+    u16 dx = 0;
+    u16 sp = 0;
+    u16 bp = 0;
+    u16 si = 0;
+    u16 di = 0;
+};
+
 enum class InstrType {
     NONE,
 
@@ -101,7 +113,7 @@ struct Operand {
 
     // OperandType::IMMEDIATE
     s32 immediate;
-    bool byte;
+    bool byte; // If just one byte, will be in lower byte of immediate. Otherwise will be lower two bytes.
 
     // OperandType::JUMP_OFFSET
     s8 offset;
