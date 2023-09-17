@@ -37,33 +37,6 @@ MemoryAddress decode_memory(u8 rm) {
     }
 }
 
-// Get instruction str given substrings. Returns malloced ptr.
-char* instruction_line(const char* instruction, const char* dest_str, const char* source_str) {
-    const char* mid_str = ", ";
-    const char* end_str = "\n";
-    char* instruction_str = (char*)malloc(sizeof(char)*(strlen(instruction)+strlen(mid_str)+strlen(end_str)+strlen(dest_str)+strlen(source_str)+1));
-    strcpy(instruction_str, instruction);
-    strcat(instruction_str, dest_str);
-    strcat(instruction_str, mid_str);
-    strcat(instruction_str, source_str);
-    strcat(instruction_str, end_str);
-    return instruction_str;
-}
-
-char* instruction_line_offset(const char* instruction, const char* label_str, s8 offset) {
-    const char* mid_str = " ; ";
-    const char* end_str = "\n";
-    char offset_str[20];
-    sprintf(offset_str, "%d", offset);
-    char* instruction_str = (char*)malloc(sizeof(char)*(strlen(instruction)+strlen(end_str)+strlen(mid_str) + strlen(label_str) + strlen(offset_str)+1));
-    strcpy(instruction_str, instruction);
-    strcat(instruction_str, label_str);
-    strcat(instruction_str, mid_str); 
-    strcat(instruction_str, offset_str);
-    strcat(instruction_str, end_str);
-    return instruction_str;
-}
-
 Register decode_register(u8 reg, bool w) 
 {
     if (reg == 0b00000000) {
@@ -391,8 +364,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JE;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01111100) {
         // JL
@@ -402,8 +375,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JL;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01111110) {
         // JLE
@@ -413,8 +386,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JLE;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01110010) {
         // JB
@@ -424,8 +397,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JB;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01110110) {
         // JBE
@@ -435,8 +408,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JBE;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01111010) {
         // JP
@@ -446,8 +419,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JP;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01110000) {
         // JO
@@ -457,8 +430,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JO;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01111000) {
         // JS
@@ -468,8 +441,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JS;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01110101) {
         // JNE
@@ -479,8 +452,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JNE;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01111101) {
         // JNL
@@ -490,8 +463,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JNL;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01111111) {
         // JG
@@ -501,8 +474,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JG;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01110011) {
         // JNB
@@ -512,8 +485,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JNB;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01110111) {
         // JA
@@ -523,8 +496,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JA;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01111011) {
         // JNP
@@ -534,8 +507,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JNP;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01110001) {
         // JNO
@@ -545,8 +518,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JNO;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01111001) {
         // JNS
@@ -556,8 +529,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JNS;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b11100010) {
         // LOOP
@@ -567,8 +540,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::LOOP;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b11100001) {
         // LOOPZ
@@ -578,8 +551,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::LOOPZ;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b11100000) {
         // LOOPNZ
@@ -589,8 +562,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::LOOPNZ;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b11100011) {
         // JCXZ
@@ -600,8 +573,8 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
         Instruction decoded;
         decoded.type = InstrType::JCXZ;
         decoded.operands[0].type = OperandType::JUMP_OFFSET;
-        decoded.operands[0].jump.offset = offset;
-        decoded.operands[0].jump.label = get_label(*current, offset, label_indices, label_count);
+        decoded.operands[0].offset = offset;
+        decoded.operands[0].label = get_label(*current, offset, label_indices, label_count);
         return decoded;
     }
 
