@@ -5,7 +5,7 @@
 #include "data.h"
 
 // Single unit compilation
-#include "disassemble.cpp"
+#include "decode.cpp"
 
 //TODO(surein): clean up string handling ensuring no memory leaks
 //TODO(surein): complete disassembler sufficiently to complete listing 42
