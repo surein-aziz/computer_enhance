@@ -78,25 +78,25 @@ void process(Bytes asm_file, const char* output_path, bool exec)
 
     // Save number of bytes output for each instruction
     s32* instruction_bytes = (s32*)malloc(asm_file.size*sizeof(s32));
-    s32 instruction_count = 0;
 
     // Save index of each label found.
     s32* label_indices = (s32*)malloc(MAX_LABELS*sizeof(s32));
     s32 label_count = 0;
 
-    char** instruction_lines = (char**)malloc(MAX_LINES*sizeof(char*));
-    int line_count = 0;
+    Instruction* instructions = (Instruction*)malloc(MAX_INSTRUCTIONS*sizeof(Instruction));
+    int instruction_count = 0;
     
     while (current < asm_file.size) {
         s32 prev = current;
 
-        instruction_lines[line_count++] = decode_instruction(asm_file, &current, label_indices, &label_count);
-        Assert(line_count < MAX_LINES);
+        instructions[instruction_count] = decode_instruction(asm_file, &current, label_indices, &label_count);
+        Assert(instruction_count < MAX_INSTRUCTIONS);
         if (current == prev) {
             Assert(!"Decode failed.");
             break;
         }
-        instruction_bytes[instruction_count++] = current-prev;
+        instruction_bytes[instruction_count] = current-prev;
+        instruction_count++;
     }
 
     // Output to bytes ready to be output to file.
@@ -107,8 +107,9 @@ void process(Bytes asm_file, const char* output_path, bool exec)
     s32 total_bytes = 0; // Keep track number of input bytes corresponding to instructions output so far.
     s32 next_label_index = get_next_label_index(total_bytes, label_count, label_indices);
     for (int i = 0; i < instruction_count; ++i) {
-        output = append_chars(output, instruction_lines[i]);
-        free(instruction_lines[i]);
+        //TODO(surein): output instructions
+        //output = append_chars(output, instruction_lines[i]);
+        //free(instruction_lines[i]);
 
         total_bytes += instruction_bytes[i];
         // Insert label if required
@@ -123,7 +124,7 @@ void process(Bytes asm_file, const char* output_path, bool exec)
     Assert(labels_inserted == label_count);
 
 
-    free(instruction_lines);
+    free(instructions);
     free(instruction_bytes);
     free(label_indices);
 
