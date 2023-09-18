@@ -8,6 +8,7 @@ struct Bytes {
 
 // Store simulated processor context
 struct Context {
+    // Registers
     u16 ax = 0;
     u16 bx = 0;
     u16 cx = 0;
@@ -16,6 +17,12 @@ struct Context {
     u16 bp = 0;
     u16 si = 0;
     u16 di = 0;
+
+    // Segment registers
+    u16 es = 0;
+    u16 cs = 0;
+    u16 ss = 0;
+    u16 ds = 0;
 };
 
 enum class InstrType {
@@ -68,6 +75,12 @@ enum class Register {
     BP,
     SI,
     DI,
+
+    // Segment registers
+    ES,
+    CS,
+    SS,
+    DS,
 
     COUNT
 };

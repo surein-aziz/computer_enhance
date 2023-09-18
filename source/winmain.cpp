@@ -174,6 +174,10 @@ const char* reg_str(Register reg) {
         case Register::BP: return "BP";
         case Register::SI: return "SI";
         case Register::DI: return "DI";
+        case Register::ES: return "ES";
+        case Register::CS: return "CS";
+        case Register::SS: return "SS";
+        case Register::DS: return "DS";
         case Register::NONE:
         case Register::COUNT:
             break;
@@ -314,37 +318,37 @@ u8* get_register(Register reg, Context* context, u16* bytes) {
             return (u8*)&context->ax;
         case Register::AL:
             *bytes = 1;
-            return (u8*)&context->ax + 1;
+            return (u8*)&context->ax;
         case Register::AH:
             *bytes = 1;
-            return (u8*)&context->ax;
+            return (u8*)&context->ax+1;
         case Register::BX:
             *bytes = 2;
             return (u8*)&context->bx;
         case Register::BL:
             *bytes = 1;
-            return (u8*)&context->bx + 1;
+            return (u8*)&context->bx;
         case Register::BH:
             *bytes = 1;
-            return (u8*)&context->bx;
+            return (u8*)&context->bx+1;
         case Register::CX:
             *bytes = 2;
             return (u8*)&context->cx;
         case Register::CL:
             *bytes = 1;
-            return (u8*)&context->cx + 1;
+            return (u8*)&context->cx;
         case Register::CH:
             *bytes = 1;
-            return (u8*)&context->cx;
+            return (u8*)&context->cx+1;
         case Register::DX:
             *bytes = 2;
             return (u8*)&context->dx;
         case Register::DL:
             *bytes = 1;
-            return (u8*)&context->dx + 1;
+            return (u8*)&context->dx;
         case Register::DH:
             *bytes = 1;
-            return (u8*)&context->dx;
+            return (u8*)&context->dx+1;
         case Register::SP:
             *bytes = 2;
             return (u8*)&context->sp;
@@ -357,6 +361,18 @@ u8* get_register(Register reg, Context* context, u16* bytes) {
         case Register::DI:
             *bytes = 2;
             return (u8*)&context->di;
+        case Register::ES:
+            *bytes = 2;
+            return (u8*)&context->es;
+        case Register::CS:
+            *bytes = 2;
+            return (u8*)&context->cs;
+        case Register::SS:
+            *bytes = 2;
+            return (u8*)&context->ss;
+        case Register::DS:
+            *bytes = 2;
+            return (u8*)&context->ds;
         case Register::NONE:
         case Register::COUNT:
             break;
@@ -446,6 +462,10 @@ Bytes write_end_context(Bytes bytes, Context* context) {
     sprintf(context_str+strlen(context_str), "      BP: %#06x (%d)\n", context->bp, context->bp);
     sprintf(context_str+strlen(context_str), "      SI: %#06x (%d)\n", context->si, context->si);
     sprintf(context_str+strlen(context_str), "      DI: %#06x (%d)\n", context->di, context->di);
+    sprintf(context_str+strlen(context_str), "      ES: %#06x (%d)\n", context->es, context->es);
+    sprintf(context_str+strlen(context_str), "      CS: %#06x (%d)\n", context->cs, context->cs);
+    sprintf(context_str+strlen(context_str), "      SS: %#06x (%d)\n", context->ss, context->ss);
+    sprintf(context_str+strlen(context_str), "      DS: %#06x (%d)\n", context->ds, context->ds);
 
     Bytes out = append_chars(bytes, context_str);
     free(context_str);
@@ -538,13 +558,10 @@ s32 APIENTRY WinMain(HINSTANCE instance,
     free(bytes.buffer);
     bytes = {};
 
-    //TODO(surein): not implemented yet
-    /*
     bytes = read_entire_file("../data/listing_0045_challenge_register_movs");
     process(bytes, "../output/listing_0045_challenge_register_movs.asm", true);
     free(bytes.buffer);
     bytes = {};
-    */
 
     return 0;
 }

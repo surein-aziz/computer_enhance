@@ -60,6 +60,21 @@ Register decode_register(u8 reg, bool w)
     return Register::NONE;
 }
 
+Register decode_segment_register(u8 reg)
+{
+        if (reg == 0b0) {
+        return Register::ES;
+    } else if (reg == 0b1) {
+        return Register::CS;
+    } else if (reg == 0b10) {
+        return Register::SS;
+    } else if (reg == 0b11) {
+        return Register::DS;
+    }
+    Assert(!"Invalid reg code");
+    return Register::NONE;
+}
+
 InstrType get_subvariant(u8 code) {
     if (code == 0b00000000) {
         return InstrType::ADD;
@@ -74,11 +89,14 @@ InstrType get_subvariant(u8 code) {
     }
 }
 
-void extract_dwmodregrm(Bytes asm_file, int* current, Instruction* out) {
+void extract_dwmodregrm(Bytes asm_file, int* current, bool segment_register, Instruction* out) {
         // We initially read from two bytes for this instruction
         u8 byte1 = asm_file.buffer[(*current)++];
         bool d = !!(byte1 & 0b00000010);
         bool w = !!(byte1 & 0b00000001);
+        if (segment_register) {
+            w = true;
+        }
 
         u8 byte2 = asm_file.buffer[(*current)++];
         u8 mod = byte2 & 0b11000000;
@@ -92,12 +110,13 @@ void extract_dwmodregrm(Bytes asm_file, int* current, Instruction* out) {
 
             out->operands[0].type = OperandType::REGISTER;
             out->operands[1].type = OperandType::REGISTER;
+            Register reg_enum = segment_register ? decode_segment_register(register_bits) : decode_register(register_bits, w);
             if (d) {
-                out->operands[0].reg = decode_register(register_bits, w);
+                out->operands[0].reg = reg_enum;
                 out->operands[1].reg = decode_register(rm, w);
             } else {
                 out->operands[0].reg = decode_register(rm, w);
-                out->operands[1].reg = decode_register(register_bits, w);
+                out->operands[1].reg = reg_enum;
             }
 
         } else if (mod == 0b00000000) {
@@ -114,9 +133,10 @@ void extract_dwmodregrm(Bytes asm_file, int* current, Instruction* out) {
                 address = decode_memory(rm);
             }
 
+            Register reg_enum = segment_register ? decode_segment_register(register_bits) : decode_register(register_bits, w);
             if (d) {
                 out->operands[0].type = OperandType::REGISTER;
-                out->operands[0].reg = decode_register(register_bits, w);
+                out->operands[0].reg = reg_enum;
                 out->operands[1].type = OperandType::MEMORY;
                 out->operands[1].address = address;                
                 out->operands[1].displacement = displacement;
@@ -125,7 +145,7 @@ void extract_dwmodregrm(Bytes asm_file, int* current, Instruction* out) {
                 out->operands[0].address = address;                
                 out->operands[0].displacement = displacement;
                 out->operands[1].type = OperandType::REGISTER;
-                out->operands[1].reg = decode_register(register_bits, w);
+                out->operands[1].reg = reg_enum;
             }
 
         } else if (mod == 0b01000000) {
@@ -134,9 +154,10 @@ void extract_dwmodregrm(Bytes asm_file, int* current, Instruction* out) {
             u8 low = asm_file.buffer[(*current)++];
             s32 displacement = (s8)low;
             MemoryAddress address = decode_memory(rm);
+            Register reg_enum = segment_register ? decode_segment_register(register_bits) : decode_register(register_bits, w);
             if (d) {
                 out->operands[0].type = OperandType::REGISTER;
-                out->operands[0].reg = decode_register(register_bits, w);
+                out->operands[0].reg = reg_enum;
                 out->operands[1].type = OperandType::MEMORY;
                 out->operands[1].address = address;                
                 out->operands[1].displacement = displacement;
@@ -145,7 +166,7 @@ void extract_dwmodregrm(Bytes asm_file, int* current, Instruction* out) {
                 out->operands[0].address = address;                
                 out->operands[0].displacement = displacement;
                 out->operands[1].type = OperandType::REGISTER;
-                out->operands[1].reg = decode_register(register_bits, w);
+                out->operands[1].reg = reg_enum;
             }
 
         } else {
@@ -156,9 +177,10 @@ void extract_dwmodregrm(Bytes asm_file, int* current, Instruction* out) {
             u8 high = asm_file.buffer[(*current)++];
             s16 displacement = (s16)(low | (high << 8));
             MemoryAddress address = decode_memory(rm);
+            Register reg_enum = segment_register ? decode_segment_register(register_bits) : decode_register(register_bits, w);
             if (d) {
                 out->operands[0].type = OperandType::REGISTER;
-                out->operands[0].reg = decode_register(register_bits, w);
+                out->operands[0].reg = reg_enum;
                 out->operands[1].type = OperandType::MEMORY;
                 out->operands[1].address = address;                
                 out->operands[1].displacement = displacement;
@@ -167,7 +189,7 @@ void extract_dwmodregrm(Bytes asm_file, int* current, Instruction* out) {
                 out->operands[0].address = address;                
                 out->operands[0].displacement = displacement;
                 out->operands[1].type = OperandType::REGISTER;
-                out->operands[1].reg = decode_register(register_bits, w);
+                out->operands[1].reg = reg_enum;
             }
         }
 }
@@ -254,7 +276,7 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
 
         Instruction decoded;
         decoded.type = InstrType::MOV;
-        extract_dwmodregrm(asm_file, current, &decoded);
+        extract_dwmodregrm(asm_file, current, false, &decoded);
         return decoded;
 
     } else if ((asm_file.buffer[*current] & 0b11110000) == 0b10110000) {
@@ -325,7 +347,7 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
 
         Instruction decoded;
         decoded.type = get_subvariant(asm_file.buffer[*current] & 0b00111000);
-        extract_dwmodregrm(asm_file, current, &decoded);
+        extract_dwmodregrm(asm_file, current, false, &decoded);
         return decoded;
     } else if  ((asm_file.buffer[*current] & 0b11111100) == 0b10000000) {
         // Some subvariant of immediate to register / memory
@@ -355,6 +377,13 @@ Instruction decode_instruction(Bytes asm_file, s32* current, s32* label_indices,
             decoded.operands[1].byte = false;
         }
         decoded.operands[1].immediate = data;
+        return decoded;
+    } else if ((asm_file.buffer[*current] & 0b11111100) == 0b10001100) {
+        // MOV segment register to/from memory
+
+        Instruction decoded;
+        decoded.type = InstrType::MOV;
+        extract_dwmodregrm(asm_file, current, true, &decoded);
         return decoded;
     } else if (asm_file.buffer[*current] == 0b01110100) {
         // JE
