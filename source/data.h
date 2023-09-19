@@ -6,6 +6,18 @@ struct Bytes {
     s32 size = 0;
 };
 
+enum Flags {
+    CARRY_FLAG = 1 << 0,
+    PARITY_FLAG = 1 << 2,
+    AUX_CARRY_FLAG = 1 << 4,
+    ZERO_FLAG = 1 << 6,
+    SIGN_FLAG = 1 << 7,
+    TRAP_FLAG = 1 << 8,
+    INTERRUPT_FLAG = 1 << 9,
+    DIRECTION_FLAG = 1 << 10,
+    OVERFLOW_FLAG = 1 << 11
+};
+
 // Store simulated processor context
 struct Context {
     // Registers

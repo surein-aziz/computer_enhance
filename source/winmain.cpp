@@ -389,6 +389,40 @@ u8* get_register(Register reg, Context* context, u16* bytes) {
     return 0;
 }
 
+char* flags_str(u16 flags) {
+    char* flags_string = (char*)malloc(100*sizeof(char));
+    flags_string[0] = 0;
+
+    if (flags & CARRY_FLAG) {
+        strcat(flags_string, "C");
+    }
+    if (flags & PARITY_FLAG) {
+        strcat(flags_string, "P");
+    }
+    if (flags & AUX_CARRY_FLAG) {
+        strcat(flags_string, "A");
+    }
+    if (flags & ZERO_FLAG) {
+        strcat(flags_string, "Z");
+    }
+    if (flags & SIGN_FLAG) {
+        strcat(flags_string, "S");
+    }
+    if (flags & TRAP_FLAG) {
+        strcat(flags_string, "T");
+    }
+    if (flags & INTERRUPT_FLAG) {
+        strcat(flags_string, "I");
+    }
+    if (flags & DIRECTION_FLAG) {
+        strcat(flags_string, "D");
+    }
+    if (flags & OVERFLOW_FLAG) {
+        strcat(flags_string, "O");
+    }
+    return flags_string;
+}
+
 char* simulate_instruction(Instruction instruction, Context* context) {
     if (instruction.operands[0].type != OperandType::REGISTER) {
         Assert(!"Not implemented yet");
@@ -430,11 +464,15 @@ char* simulate_instruction(Instruction instruction, Context* context) {
     }
 
     u16 before = 0;
+    u16 flags_before = context->flags;
     if (bytes == 2) {
         before = dest_reg[0] | dest_reg[1] << 8;
     } else {
         before = dest_reg[0];
     }
+
+    bool set_flags = false;
+    u32 result_wide = 0;
 
     // Update data
     if (instruction.type == InstrType::MOV) {
@@ -444,17 +482,25 @@ char* simulate_instruction(Instruction instruction, Context* context) {
         }
     } else if (instruction.type == InstrType::ADD) {
         if (bytes == 1) {
-            dest_reg[0] = dest_reg[0]+byte1;
+            result_wide = dest_reg[0]+byte1;
+            dest_reg[0] = (u8)result_wide;
         } else if (bytes == 2) {
             u16* dest_reg_16 = (u16*)dest_reg;
-            dest_reg_16[0] = dest_reg_16[0] + (byte1 | byte2 << 8);
+            result_wide = dest_reg_16[0] + (byte1 | byte2 << 8);
+            dest_reg_16[0] = (u16)result_wide;
         }
-    } else if (instruction.type == InstrType::SUB) {
+    } else if (instruction.type == InstrType::SUB || instruction.type == InstrType::CMP) {
         if (bytes == 1) {
-            dest_reg[0] = dest_reg[0] - byte1;
+            result_wide = dest_reg[0] - byte1;
+            if (instruction.type == InstrType::SUB) {
+                dest_reg[0] = (u8)result_wide;
+            }
         } else if (bytes == 2) {
             u16* dest_reg_16 = (u16*)dest_reg;
-            dest_reg_16[0] = dest_reg_16[0] - (byte1 | byte2 << 8);
+            result_wide = dest_reg_16[0] - (byte1 | byte2 << 8);
+            if (instruction.type == InstrType::SUB) {
+                dest_reg_16[0] = (u16)result_wide;
+            }
         }
     } else if (instruction.type == InstrType::CMP) {
         // Update no data.
@@ -469,16 +515,53 @@ char* simulate_instruction(Instruction instruction, Context* context) {
         return 0;
     }
 
+    if (set_flags) {
+        u16 flags = 0;
+        if (result_wide == 0) {
+            flags = flags | ZERO_FLAG;
+        }
+        if (bytes == 1) {
+            if (result_wide & (1 << 8)) {
+                flags = flags | SIGN_FLAG;
+            }
+        } else if (bytes == 2) {
+            if (result_wide & (1 << 16)) {
+                flags = flags | SIGN_FLAG;
+            }
+        }
+    }
+
     u16 after = 0;
+    u16 flags_after = context->flags;
     if (bytes == 2) {
         after = dest_reg[0] | dest_reg[1] << 8;
     } else {
         after = dest_reg[0];
     }
 
-    char* log_str = (char*)malloc(100*sizeof(char));
-    strcpy(log_str, reg_str(instruction.operands[0].reg));
-    sprintf(log_str+strlen(log_str), ":%#x->%#x", before, after);
+    char* log_str = 0;
+    if (before != after) {
+        log_str = (char*)malloc(200*sizeof(char));
+        strcpy(log_str, reg_str(instruction.operands[0].reg));
+        sprintf(log_str+strlen(log_str), ":%#x->%#x", before, after);
+    }
+    if (flags_before != flags_after) {
+        if (log_str) {
+            strcat(log_str, " ");
+        } else {
+            log_str = (char*)malloc(200*sizeof(char));
+            log_str[0] = 0;
+        }
+        strcat(log_str, "FLAGS:");
+        char* before_flags_str = flags_str(flags_before);
+        char* after_flags_str = flags_str(flags_after);
+        strcat(log_str, before_flags_str);
+        strcat(log_str, "->");
+        strcat(log_str, after_flags_str);
+        free(before_flags_str);
+        free(after_flags_str);
+    }
+
     return log_str;
 }
 
@@ -513,7 +596,13 @@ Bytes write_end_context(Bytes bytes, Context* context) {
     cur = context->ip;
     if (cur != 0) sprintf(context_str+strlen(context_str), "      IP: %#x (%d)\n", cur, cur);
     cur = context->flags;
-    if (cur != 0) sprintf(context_str+strlen(context_str), "   FLAGS: %#x (%d)\n", cur, cur);
+    if (cur != 0) {
+        sprintf(context_str+strlen(context_str), "   FLAGS: ");
+        char* flags_string = flags_str(cur);
+        strcat(context_str, flags_string);
+        strcat(context_str, "\n");
+        free(flags_string);
+    }
 
 
     Bytes out = append_chars(bytes, context_str);
