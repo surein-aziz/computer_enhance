@@ -524,6 +524,18 @@ char* simulate_instruction(Instruction instruction, Context* context) {
             if (result_wide & (1 << i)) count++;
         }
         if ((count % 2) == 0) flags = flags | PARITY_FLAG;
+        // Simplest way to figure out aux carry is to carry out the op on first 4 bits and check for carry.
+        if (instruction.type == InstrType::ADD) {
+            u8 res = (before & 0x0F) + (byte1 & 0x0F);
+            if (res & 0x10) {
+                flags = flags | AUX_CARRY_FLAG;
+            }
+        } else if (instruction.type == InstrType::SUB || instruction.type == InstrType::CMP) {
+            u8 res = (before & 0x0F) - (byte1 & 0x0F);
+            if (res & 0x10) {
+                flags = flags | AUX_CARRY_FLAG;
+            }
+        }
         if (bytes == 1) {
             if ((result_wide & 0xFF) == 0) {
                 flags = flags | ZERO_FLAG;
@@ -531,6 +543,7 @@ char* simulate_instruction(Instruction instruction, Context* context) {
             if (result_wide & (1 << 7)) {
                 flags = flags | SIGN_FLAG;
             }
+            // Note(surein): I'm not confident about the overflow bit.
             if (instruction.type == InstrType::ADD) {
                 if (!(byte1 & 1 << 7) && !(before & 1 << 7) && (result_wide & 1 << 7)) {
                     // Added two positives and got a negative
@@ -550,6 +563,9 @@ char* simulate_instruction(Instruction instruction, Context* context) {
                     flags = flags | OVERFLOW_FLAG;
                 }
             }
+            if (result_wide & 0x0100) {
+                flags = flags | CARRY_FLAG;
+            }
         } else if (bytes == 2) {
             if ((result_wide & 0xFFFF) == 0) {
                 flags = flags | ZERO_FLAG;
@@ -557,6 +573,7 @@ char* simulate_instruction(Instruction instruction, Context* context) {
             if (result_wide & (1 << 15)) {
                 flags = flags | SIGN_FLAG;
             }
+            // Note(surein): I'm not confident about the overflow bit.
             if (instruction.type == InstrType::ADD) {
                 if (!(byte2 & 1 << 7) && !(before & 1 << 15) && (result_wide & 1 << 15)) {
                     // Added two positives and got a negative
@@ -575,6 +592,9 @@ char* simulate_instruction(Instruction instruction, Context* context) {
                     // Subtracted negative from positive and got negative
                     flags = flags | OVERFLOW_FLAG;
                 }
+            }
+            if (result_wide & 0x010000) {
+                flags = flags | CARRY_FLAG;
             }
         }
         context->flags = flags;
