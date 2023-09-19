@@ -95,31 +95,53 @@ char* instruction_line(const char* instruction, const char* operand0, const char
 }
 
 // Get instruction line string given substrings for a conditional jump. Returns malloced ptr.
-char* instruction_line_jump(const char* instruction, s8 offset, s32 label, char* log_str) {
-    char offset_str[20];
-    sprintf(offset_str, "%d", offset);
-    char label_str[100];
-    strcpy(label_str, "label_");
-    sprintf(label_str + strlen(label_str), "%d", label);
-    const char* space_str = " ";
-    const char* mid_str = " ; ";
-    const char* end_str = "\n";
-    u64 len = strlen(instruction)+strlen(space_str)+strlen(end_str)+strlen(mid_str) + strlen(label_str) + strlen(offset_str)+1;
-    if (log_str) {
-        len += strlen(log_str) + strlen(mid_str);
+char* instruction_line_jump(const char* instruction, s8 offset, s32 label, char* log_str, bool simulate) {
+    if (simulate) {
+        char offset_str[20];
+        sprintf(offset_str, "$%+d", offset+2);
+        const char* space_str = " ";
+        const char* end_str = "\n";
+        const char* mid_str = " ; ";
+        u64 len = strlen(instruction)+strlen(space_str)+strlen(end_str) + strlen(offset_str)+1;
+        if (log_str) {
+            len += strlen(log_str) + strlen(mid_str);
+        }
+        char* instruction_str = (char*)malloc(sizeof(char)*(len));
+        strcpy(instruction_str, instruction);
+        strcat(instruction_str, space_str);
+        strcat(instruction_str, offset_str);
+        if (log_str) {
+            strcat(instruction_str, mid_str);
+            strcat(instruction_str, log_str);
+        }
+        strcat(instruction_str, end_str);
+        return instruction_str;
+    } else {
+        char offset_str[20];
+        sprintf(offset_str, "%d", offset);
+        char label_str[100];
+        strcpy(label_str, "label_");
+        sprintf(label_str + strlen(label_str), "%d", label);
+        const char* space_str = " ";
+        const char* mid_str = " ; ";
+        const char* end_str = "\n";
+        u64 len = strlen(instruction)+strlen(space_str)+strlen(end_str)+strlen(mid_str) + strlen(label_str) + strlen(offset_str)+1;
+        if (log_str) {
+            len += strlen(log_str) + strlen(mid_str);
+        }
+        char* instruction_str = (char*)malloc(sizeof(char)*(len));
+        strcpy(instruction_str, instruction);
+        strcat(instruction_str, space_str);
+        strcat(instruction_str, label_str);
+        strcat(instruction_str, mid_str); 
+        strcat(instruction_str, offset_str);
+        if (log_str) {
+            strcat(instruction_str, mid_str);
+            strcat(instruction_str, log_str);
+        }
+        strcat(instruction_str, end_str);
+        return instruction_str;
     }
-    char* instruction_str = (char*)malloc(sizeof(char)*(len));
-    strcpy(instruction_str, instruction);
-    strcat(instruction_str, space_str);
-    strcat(instruction_str, label_str);
-    strcat(instruction_str, mid_str); 
-    strcat(instruction_str, offset_str);
-    if (log_str) {
-        strcat(instruction_str, mid_str);
-        strcat(instruction_str, log_str);
-    }
-    strcat(instruction_str, end_str);
-    return instruction_str;
 }
 
 const char* instruction_str(InstrType type) {
@@ -257,7 +279,7 @@ char* operand_str(Operand operand) {
     return 0;
 }
 
-Bytes write_instruction_line(Bytes bytes, Instruction instruction, char* log_str) {
+Bytes write_instruction_line(Bytes bytes, Instruction instruction, char* log_str, bool simulate) {
     char* str = 0;
     switch (instruction.type) {
         case InstrType::MOV:
@@ -294,7 +316,7 @@ Bytes write_instruction_line(Bytes bytes, Instruction instruction, char* log_str
         case InstrType::JCXZ: 
             {
                 Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
-                str = instruction_line_jump(instruction_str(instruction.type), instruction.operands[0].offset, instruction.operands[0].label, log_str);
+                str = instruction_line_jump(instruction_str(instruction.type), instruction.operands[0].offset, instruction.operands[0].label, log_str, simulate);
                 break;
             }
         case InstrType::NONE:
@@ -423,101 +445,183 @@ char* flags_str(u16 flags) {
     return flags_string;
 }
 
-char* simulate_instruction(Instruction instruction, Context* context, u16 ip_before) {
+void get_operands(Instruction instruction, Context* context, u8* byte1, u8* byte2, u16* bytes, u8** dest, u16* before) {
     if (instruction.operands[0].type != OperandType::REGISTER) {
         Assert(!"Not implemented yet");
-        return 0;
+        return;
     }
 
     u16 dest_bytes = 0;
     u16 source_bytes = 0;
-    u16 bytes = 0;
-    u8 byte1 = 0;
-    u8 byte2 = 0;
-    u8* dest_reg = get_register(instruction.operands[0].reg, context, &dest_bytes);
+    *dest = get_register(instruction.operands[0].reg, context, &dest_bytes);
     if (instruction.operands[1].type == OperandType::REGISTER) {
         u8* source_reg = get_register(instruction.operands[1].reg, context, &source_bytes);
         if (dest_bytes == 2 && source_bytes == 2) {
-            byte1 = source_reg[0];
-            byte2 = source_reg[1];
-            bytes = 2;
+            *byte1 = source_reg[0];
+            *byte2 = source_reg[1];
+            *bytes = 2;
         } else {
             Assert(dest_bytes >= 1 && source_bytes >= 1);
-            byte1 = source_reg[0];
-            bytes = 1;
+            *byte1 = source_reg[0];
+            *bytes = 1;
         }
     } else if (instruction.operands[1].type == OperandType::IMMEDIATE) {
         s32 immediate = instruction.operands[1].immediate;
         source_bytes = instruction.operands[1].byte ? 1 : 2;
         if (dest_bytes == 2 && source_bytes == 2) {
-            byte1 = immediate & 0xFF;
-            byte2 = (immediate >> 8) & 0xFF;
-            bytes = 2;
+            *byte1 = immediate & 0xFF;
+            *byte2 = (immediate >> 8) & 0xFF;
+            *bytes = 2;
         } else {
             Assert(dest_bytes >= 1 && source_bytes >= 1);
-            byte1 = immediate & 0xFF;
-            bytes = 1;
+            *byte1 = immediate & 0xFF;
+            *bytes = 1;
         }
     } else {
         Assert(!"Not implemented yet");
-        return 0;
+        return;
     }
 
+    if (*bytes == 2) {
+        *before = (*dest)[0] | (*dest)[1] << 8;
+    } else if (*bytes == 1) {
+        *before = (*dest)[0];
+    }
+}
+
+char* simulate_instruction(Instruction instruction, Context* context, u16 ip_before, bool implicit) {
+
+    u8 byte1 = 0;
+    u8 byte2 = 0;
+    u16 bytes = 0;
+    u8* dest = 0;
     u16 before = 0;
     u16 flags_before = context->flags;
-    if (bytes == 2) {
-        before = dest_reg[0] | dest_reg[1] << 8;
-    } else {
-        before = dest_reg[0];
-    }
+    bool data_op = false;
 
     bool set_flags = false;
     u32 result_wide = 0;
 
     // Update data
     if (instruction.type == InstrType::MOV) {
-        dest_reg[0] = byte1;
+        data_op = true;
+        get_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before);
+
+        dest[0] = byte1;
         if (bytes == 2) {
-            dest_reg[1] = byte2;
+            dest[1] = byte2;
         }
     } else if (instruction.type == InstrType::ADD) {
         set_flags = true;
+        data_op = true;
+        get_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before);
+
         if (bytes == 1) {
-            result_wide = dest_reg[0]+byte1;
-            dest_reg[0] = (u8)result_wide;
+            result_wide = dest[0]+byte1;
+            dest[0] = (u8)result_wide;
         } else if (bytes == 2) {
-            u16* dest_reg_16 = (u16*)dest_reg;
-            result_wide = dest_reg_16[0] + (byte1 | byte2 << 8);
-            dest_reg_16[0] = (u16)result_wide;
+            u16* dest_16 = (u16*)dest;
+            result_wide = dest_16[0] + (byte1 | byte2 << 8);
+            dest_16[0] = (u16)result_wide;
         }
     } else if (instruction.type == InstrType::SUB || instruction.type == InstrType::CMP) {
         set_flags = true;
+        data_op = true;
+        get_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before);
+
         if (bytes == 1) {
-            result_wide = dest_reg[0] - byte1;
+            result_wide = dest[0] - byte1;
             if (instruction.type == InstrType::SUB) {
-                dest_reg[0] = (u8)result_wide;
+                dest[0] = (u8)result_wide;
             }
         } else if (bytes == 2) {
-            u16* dest_reg_16 = (u16*)dest_reg;
-            result_wide = dest_reg_16[0] - (byte1 | byte2 << 8);
+            u16* dest_16 = (u16*)dest;
+            result_wide = dest_16[0] - (byte1 | byte2 << 8);
             if (instruction.type == InstrType::SUB) {
-                dest_reg_16[0] = (u16)result_wide;
+                dest_16[0] = (u16)result_wide;
             }
         }
-    } else if (instruction.type == InstrType::CMP) {
-        // Update no data.
-        if (bytes == 1) {
-            u8 byte_res = dest_reg[0] - byte1;
-        } else if (bytes == 2) {
-            u16* dest_reg_16 = (u16*)dest_reg;
-            u16 word_res = dest_reg_16[0] - (byte1 | byte2 << 8);
-        }
+    } else if (instruction.type == InstrType::JE) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ZERO_FLAG) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JB) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & CARRY_FLAG) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JP) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & PARITY_FLAG) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JNE) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (!(context->flags & ZERO_FLAG)) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::LOOPNZ) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        // Subtract one from CX then check the flag.
+        Instruction implicit_sub;
+        implicit_sub.type = InstrType::SUB;
+        implicit_sub.operands[0].type = OperandType::REGISTER;
+        implicit_sub.operands[0].reg = Register::CX;
+        implicit_sub.operands[1].type = OperandType::IMMEDIATE;
+        implicit_sub.operands[1].byte = false;
+        implicit_sub.operands[1].immediate = 1;
+        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, true);
+        if (implicit_log) free(implicit_log); // Just ignore log of implicit instruction for now
+        u16 temp = 0;
+        u8* cx = get_register(Register::CX, context, &temp);
+        u16 cx16 = cx[0] | cx[1] << 8;
+        if (!(context->flags & ZERO_FLAG) && (cx16 != 0)) context->ip += instruction.operands[0].offset;
+    /* TODO(surein): more conditional jumps that weren't tested in the course. Implement if I can be bothered.
+    } else if (instruction.type == InstrType::JL) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JLE) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (!(context->flags & )) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JBE) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JO) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JS) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JNL) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JG) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JNB) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JA) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JNP) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JNO) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JNS) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::LOOP) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::LOOPZ) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::JCXZ) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        if (context->flags & ) context->ip += instruction.operands[0].offset;
+    */
     } else {
         Assert(!"Not implemented yet");
         return 0;
     }
 
-    if (set_flags) {
+    if (set_flags && !implicit) {
         u16 flags = 0;
         u8 count = 0;
         for (int i = 0; i < 8; ++i) {
@@ -603,13 +707,13 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
     u16 after = 0;
     u16 flags_after = context->flags;
     if (bytes == 2) {
-        after = dest_reg[0] | dest_reg[1] << 8;
-    } else {
-        after = dest_reg[0];
+        after = dest[0] | dest[1] << 8;
+    } else if (bytes == 1) {
+        after = dest[0];
     }
 
     char* log_str = 0;
-    if (before != after) {
+    if (data_op && before != after) {
         log_str = (char*)malloc(200*sizeof(char));
         strcpy(log_str, reg_str(instruction.operands[0].reg));
         sprintf(log_str+strlen(log_str), ":%#x->%#x", before, after);
@@ -701,7 +805,7 @@ Bytes write_disassembly(Instruction* instructions, s32* instruction_bytes, s32 i
     s32 current_bytes = 0; // Keep track number of input bytes corresponding to instructions output so far.
     s32 next_label_index = get_next_label_index(current_bytes, label_count, label_indices);
     for (int i = 0; i < instruction_count; ++i) {
-        output = write_instruction_line(output, instructions[i], 0);
+        output = write_instruction_line(output, instructions[i], 0, false);
 
         current_bytes += instruction_bytes[i];
         // Insert label if required
@@ -734,8 +838,8 @@ Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instructio
         // Advance instruction pointer, this happens before the instruction
         u16 ip_before = context.ip;
         context.ip += instruction_bytes[current_instruction];
-        char* log_str = simulate_instruction(instructions[current_instruction], &context, ip_before);
-        output = write_instruction_line(output, instructions[current_instruction], log_str);
+        char* log_str = simulate_instruction(instructions[current_instruction], &context, ip_before, false);
+        output = write_instruction_line(output, instructions[current_instruction], log_str, true);
         if (log_str) free(log_str);
     }
 
@@ -803,7 +907,6 @@ s32 APIENTRY WinMain(HINSTANCE instance,
     free(bytes.buffer);
     bytes = {};
 
-    /*
     bytes = read_entire_file("../data/listing_0049_conditional_jumps");
     process(bytes, "../output/listing_0049_conditional_jumps.txt", true);
     free(bytes.buffer);
@@ -812,7 +915,7 @@ s32 APIENTRY WinMain(HINSTANCE instance,
     bytes = read_entire_file("../data/listing_0050_challenge_jumps");
     process(bytes, "../output/listing_0050_challenge_jumps.txt", true);
     free(bytes.buffer);
-    bytes = {};*/
+    bytes = {};
 
     return 0;
 }
