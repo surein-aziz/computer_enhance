@@ -720,11 +720,11 @@ Bytes write_disassembly(Instruction* instructions, s32* instruction_bytes, s32 i
 }
 
 // Simulate instructions, printing out simulated instruction and state
-Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instruction_count, s32* bytes_to_instruction) {
+Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instruction_count, s32* bytes_to_instruction, s32 total_bytes) {
     Bytes output;
     Context context; // Simulated processor context
 
-    while(context.ip <= instruction_bytes[instruction_count-1]) {
+    while(context.ip < total_bytes) {
         s32 current_instruction = bytes_to_instruction[context.ip];
         if (current_instruction < 0) {
             // No valid instruction at this byte offset. Error.
@@ -780,7 +780,7 @@ void process(Bytes asm_file, const char* output_path, bool exec)
     Bytes output;
     if (exec) {
         // Simulate and output each instruction simulated
-        output = simulate(instructions, instruction_bytes, instruction_count, bytes_to_instruction);
+        output = simulate(instructions, instruction_bytes, instruction_count, bytes_to_instruction, asm_file.size);
     } else {
         // Just output all of the instructions in sequence
         output = write_disassembly(instructions, instruction_bytes, instruction_count, label_indices, label_count);
@@ -799,19 +799,20 @@ s32 APIENTRY WinMain(HINSTANCE instance,
                      int show)
 {
     Bytes bytes = read_entire_file("../data/listing_0048_ip_register");
-    process(bytes, "../output/listing_0048_ip_register.log", true);
+    process(bytes, "../output/listing_0048_ip_register.txt", true);
     free(bytes.buffer);
     bytes = {};
 
+    /*
     bytes = read_entire_file("../data/listing_0049_conditional_jumps");
-    process(bytes, "../output/listing_0049_conditional_jumps.log", true);
+    process(bytes, "../output/listing_0049_conditional_jumps.txt", true);
     free(bytes.buffer);
     bytes = {};
 
     bytes = read_entire_file("../data/listing_0050_challenge_jumps");
-    process(bytes, "../output/listing_0050_challenge_jumps.log", true);
+    process(bytes, "../output/listing_0050_challenge_jumps.txt", true);
     free(bytes.buffer);
-    bytes = {};
+    bytes = {};*/
 
     return 0;
 }
