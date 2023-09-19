@@ -481,6 +481,7 @@ char* simulate_instruction(Instruction instruction, Context* context) {
             dest_reg[1] = byte2;
         }
     } else if (instruction.type == InstrType::ADD) {
+        set_flags = true;
         if (bytes == 1) {
             result_wide = dest_reg[0]+byte1;
             dest_reg[0] = (u8)result_wide;
@@ -490,6 +491,7 @@ char* simulate_instruction(Instruction instruction, Context* context) {
             dest_reg_16[0] = (u16)result_wide;
         }
     } else if (instruction.type == InstrType::SUB || instruction.type == InstrType::CMP) {
+        set_flags = true;
         if (bytes == 1) {
             result_wide = dest_reg[0] - byte1;
             if (instruction.type == InstrType::SUB) {
@@ -521,14 +523,15 @@ char* simulate_instruction(Instruction instruction, Context* context) {
             flags = flags | ZERO_FLAG;
         }
         if (bytes == 1) {
-            if (result_wide & (1 << 8)) {
+            if (result_wide & (1 << 7)) {
                 flags = flags | SIGN_FLAG;
             }
         } else if (bytes == 2) {
-            if (result_wide & (1 << 16)) {
+            if (result_wide & (1 << 15)) {
                 flags = flags | SIGN_FLAG;
             }
         }
+        context->flags = flags;
     }
 
     u16 after = 0;
