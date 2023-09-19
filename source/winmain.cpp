@@ -390,10 +390,6 @@ u8* get_register(Register reg, Context* context, u16* bytes) {
 }
 
 char* simulate_instruction(Instruction instruction, Context* context) {
-    if (instruction.type != InstrType::MOV) {
-        Assert(!"Not implemented yet");
-        return 0;
-    }
     if (instruction.operands[0].type != OperandType::REGISTER) {
         Assert(!"Not implemented yet");
         return 0;
@@ -440,9 +436,37 @@ char* simulate_instruction(Instruction instruction, Context* context) {
         before = dest_reg[0];
     }
 
-    dest_reg[0] = byte1;
-    if (bytes == 2) {
-        dest_reg[1] = byte2;
+    // Update data
+    if (instruction.type == InstrType::MOV) {
+        dest_reg[0] = byte1;
+        if (bytes == 2) {
+            dest_reg[1] = byte2;
+        }
+    } else if (instruction.type == InstrType::ADD) {
+        if (bytes == 1) {
+            dest_reg[0] = dest_reg[0]+byte1;
+        } else if (bytes == 2) {
+            u16* dest_reg_16 = (u16*)dest_reg;
+            dest_reg_16[0] = dest_reg_16[0] + (byte1 | byte2 << 8);
+        }
+    } else if (instruction.type == InstrType::SUB) {
+        if (bytes == 1) {
+            dest_reg[0] = dest_reg[0] - byte1;
+        } else if (bytes == 2) {
+            u16* dest_reg_16 = (u16*)dest_reg;
+            dest_reg_16[0] = dest_reg_16[0] - (byte1 | byte2 << 8);
+        }
+    } else if (instruction.type == InstrType::CMP) {
+        // Update no data.
+        if (bytes == 1) {
+            u8 byte_res = dest_reg[0] - byte1;
+        } else if (bytes == 2) {
+            u16* dest_reg_16 = (u16*)dest_reg;
+            u16 word_res = dest_reg_16[0] - (byte1 | byte2 << 8);
+        }
+    } else {
+        Assert(!"Not implemented yet");
+        return 0;
     }
 
     u16 after = 0;
@@ -573,18 +597,13 @@ s32 APIENTRY WinMain(HINSTANCE instance,
                      LPTSTR cmd_line,
                      int show)
 {
-    Bytes bytes = read_entire_file("../data/listing_0043_immediate_movs");
-    process(bytes, "../output/listing_0043_immediate_movs.asm", true);
+    Bytes bytes = read_entire_file("../data/listing_0046_add_sub_cmp");
+    process(bytes, "../output/listing_0046_add_sub_cmp.asm", true);
     free(bytes.buffer);
     bytes = {};
 
-    bytes = read_entire_file("../data/listing_0044_register_movs");
-    process(bytes, "../output/listing_0044_register_movs.asm", true);
-    free(bytes.buffer);
-    bytes = {};
-
-    bytes = read_entire_file("../data/listing_0045_challenge_register_movs");
-    process(bytes, "../output/listing_0045_challenge_register_movs.asm", true);
+    bytes = read_entire_file("../data/listing_0047_challenge_flags");
+    process(bytes, "../output/listing_0047_challenge_flags.asm", true);
     free(bytes.buffer);
     bytes = {};
 
