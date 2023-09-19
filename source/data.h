@@ -23,6 +23,20 @@ struct Context {
     u16 cs = 0;
     u16 ss = 0;
     u16 ds = 0;
+
+    // 0b 0 0 0 0 OF DF IF TF SF ZF 0 AF 0 PF 0 CF
+    // OF Overflow Flag
+    // DF Direction Flag
+    // IF Interrupt Flag
+    // TF Trap Flag
+    // SF Sign Flag
+    // ZF Zero Flag
+    // AF Auxiliary Carry Flag
+    // PF Parity Flag
+    // CF Carry Flag
+    u16 flags = 0;
+
+    u16 ip = 0;
 };
 
 enum class InstrType {
@@ -81,6 +95,9 @@ enum class Register {
     CS,
     SS,
     DS,
+
+    FLAGS,
+    IP,
 
     COUNT
 };

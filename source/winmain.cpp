@@ -178,6 +178,8 @@ const char* reg_str(Register reg) {
         case Register::CS: return "CS";
         case Register::SS: return "SS";
         case Register::DS: return "DS";
+        case Register::IP: return "IP";
+        case Register::FLAGS: return "FLAGS";
         case Register::NONE:
         case Register::COUNT:
             break;
@@ -373,6 +375,12 @@ u8* get_register(Register reg, Context* context, u16* bytes) {
         case Register::DS:
             *bytes = 2;
             return (u8*)&context->ds;
+        case Register::IP:
+            *bytes = 2;
+            return (u8*)&context->ip;
+        case Register::FLAGS:
+            *bytes = 2;
+            return (u8*)&context->flags;
         case Register::NONE:
         case Register::COUNT:
             break;
@@ -446,7 +454,7 @@ char* simulate_instruction(Instruction instruction, Context* context) {
 
     char* log_str = (char*)malloc(100*sizeof(char));
     strcpy(log_str, reg_str(instruction.operands[0].reg));
-    sprintf(log_str+strlen(log_str), ":%#06x->%#06x", before, after);
+    sprintf(log_str+strlen(log_str), ":%#x->%#x", before, after);
     return log_str;
 }
 
@@ -454,18 +462,35 @@ Bytes write_end_context(Bytes bytes, Context* context) {
     char* context_str = (char*)malloc(10000*sizeof(char));
     strcpy(context_str, "\n");
     strcat(context_str, "Final registers:\n");
-    sprintf(context_str+strlen(context_str), "      AX: %#06x (%d)\n", context->ax, context->ax);
-    sprintf(context_str+strlen(context_str), "      BX: %#06x (%d)\n", context->bx, context->bx);
-    sprintf(context_str+strlen(context_str), "      CX: %#06x (%d)\n", context->cx, context->cx);
-    sprintf(context_str+strlen(context_str), "      DX: %#06x (%d)\n", context->dx, context->dx);
-    sprintf(context_str+strlen(context_str), "      SP: %#06x (%d)\n", context->sp, context->sp);
-    sprintf(context_str+strlen(context_str), "      BP: %#06x (%d)\n", context->bp, context->bp);
-    sprintf(context_str+strlen(context_str), "      SI: %#06x (%d)\n", context->si, context->si);
-    sprintf(context_str+strlen(context_str), "      DI: %#06x (%d)\n", context->di, context->di);
-    sprintf(context_str+strlen(context_str), "      ES: %#06x (%d)\n", context->es, context->es);
-    sprintf(context_str+strlen(context_str), "      CS: %#06x (%d)\n", context->cs, context->cs);
-    sprintf(context_str+strlen(context_str), "      SS: %#06x (%d)\n", context->ss, context->ss);
-    sprintf(context_str+strlen(context_str), "      DS: %#06x (%d)\n", context->ds, context->ds);
+    u16 cur = context->ax;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "      AX: %#x (%d)\n", cur, cur);
+    cur = context->bx;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "      BX: %#x (%d)\n", context->bx, context->bx);
+    cur = context->cx;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "      CX: %#x (%d)\n", cur, cur);
+    cur = context->dx;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "      DX: %#x (%d)\n", cur, cur);
+    cur = context->sp;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "      SP: %#x (%d)\n", cur, cur);
+    cur = context->bp;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "      BP: %#x (%d)\n", cur, cur);
+    cur = context->si;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "      SI: %#x (%d)\n", cur, cur);
+    cur = context->di;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "      DI: %#x (%d)\n", cur, cur);
+    cur = context->es;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "      ES: %#x (%d)\n", cur, cur);
+    cur = context->cs;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "      CS: %#x (%d)\n", cur, cur);
+    cur = context->ss;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "      SS: %#x (%d)\n", cur, cur);
+    cur = context->ds;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "      DS: %#x (%d)\n", cur, cur);
+    cur = context->ip;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "      IP: %#x (%d)\n", cur, cur);
+    cur = context->flags;
+    if (cur != 0) sprintf(context_str+strlen(context_str), "   FLAGS: %#x (%d)\n", cur, cur);
+
 
     Bytes out = append_chars(bytes, context_str);
     free(context_str);
