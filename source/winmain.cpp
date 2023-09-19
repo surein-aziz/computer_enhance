@@ -519,16 +519,62 @@ char* simulate_instruction(Instruction instruction, Context* context) {
 
     if (set_flags) {
         u16 flags = 0;
-        if (result_wide == 0) {
-            flags = flags | ZERO_FLAG;
+        u8 count = 0;
+        for (int i = 0; i < 8; ++i) {
+            if (result_wide & (1 << i)) count++;
         }
+        if ((count % 2) == 0) flags = flags | PARITY_FLAG;
         if (bytes == 1) {
+            if ((result_wide & 0xFF) == 0) {
+                flags = flags | ZERO_FLAG;
+            }
             if (result_wide & (1 << 7)) {
                 flags = flags | SIGN_FLAG;
             }
+            if (instruction.type == InstrType::ADD) {
+                if (!(byte1 & 1 << 7) && !(before & 1 << 7) && (result_wide & 1 << 7)) {
+                    // Added two positives and got a negative
+                    flags = flags | OVERFLOW_FLAG;
+                }
+                if ((byte1 & 1 << 7) && (before & 1 << 7) && !(result_wide & 1 << 7)) {
+                    // Added two negatives and got a positive
+                    flags = flags | OVERFLOW_FLAG;
+                }
+            } else if (instruction.type == InstrType::SUB || instruction.type == InstrType::CMP) {
+                if (!(byte1 & 1 << 7) && (before & 1 << 7) && !(result_wide & 1 << 7)) {
+                    // Subtracted positive from negative and got positive
+                    flags = flags | OVERFLOW_FLAG;
+                }
+                if ((byte1 & 1 << 7) && !(before & 1 << 7) && (result_wide & 1 << 7)) {
+                    // Subtracted negative from positive and got negative
+                    flags = flags | OVERFLOW_FLAG;
+                }
+            }
         } else if (bytes == 2) {
+            if ((result_wide & 0xFFFF) == 0) {
+                flags = flags | ZERO_FLAG;
+            }
             if (result_wide & (1 << 15)) {
                 flags = flags | SIGN_FLAG;
+            }
+            if (instruction.type == InstrType::ADD) {
+                if (!(byte2 & 1 << 7) && !(before & 1 << 15) && (result_wide & 1 << 15)) {
+                    // Added two positives and got a negative
+                    flags = flags | OVERFLOW_FLAG;
+                }
+                if ((byte2 & 1 << 7) && (before & 1 << 15) && !(result_wide & 1 << 15)) {
+                    // Added two negatives and got a positive
+                    flags = flags | OVERFLOW_FLAG;
+                }
+            } else if (instruction.type == InstrType::SUB || instruction.type == InstrType::CMP) {
+                if (!(byte2 & 1 << 7) && (before & 1 << 15) && !(result_wide & 1 << 15)) {
+                    // Subtracted positive from negative and got positive
+                    flags = flags | OVERFLOW_FLAG;
+                }
+                if ((byte2 & 1 << 7) && !(before & 1 << 15) && (result_wide & 1 << 15)) {
+                    // Subtracted negative from positive and got negative
+                    flags = flags | OVERFLOW_FLAG;
+                }
             }
         }
         context->flags = flags;
