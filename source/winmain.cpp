@@ -423,7 +423,7 @@ char* flags_str(u16 flags) {
     return flags_string;
 }
 
-char* simulate_instruction(Instruction instruction, Context* context) {
+char* simulate_instruction(Instruction instruction, Context* context, u16 ip_before) {
     if (instruction.operands[0].type != OperandType::REGISTER) {
         Assert(!"Not implemented yet");
         return 0;
@@ -614,6 +614,15 @@ char* simulate_instruction(Instruction instruction, Context* context) {
         strcpy(log_str, reg_str(instruction.operands[0].reg));
         sprintf(log_str+strlen(log_str), ":%#x->%#x", before, after);
     }
+    if (ip_before != context->ip) {
+        if (log_str) {
+            strcat(log_str, " ");
+        } else {
+            log_str = (char*)malloc(200*sizeof(char));
+            log_str[0] = 0;
+        }
+        sprintf(log_str+strlen(log_str), "IP:%#x->%#x", ip_before, context->ip);
+    }
     if (flags_before != flags_after) {
         if (log_str) {
             strcat(log_str, " ");
@@ -689,19 +698,19 @@ Bytes write_disassembly(Instruction* instructions, s32* instruction_bytes, s32 i
     output = append_chars(output, preamble);
 
     s32 labels_inserted = 0; // All labels should be inserted. Debugging check.
-    s32 total_bytes = 0; // Keep track number of input bytes corresponding to instructions output so far.
-    s32 next_label_index = get_next_label_index(total_bytes, label_count, label_indices);
+    s32 current_bytes = 0; // Keep track number of input bytes corresponding to instructions output so far.
+    s32 next_label_index = get_next_label_index(current_bytes, label_count, label_indices);
     for (int i = 0; i < instruction_count; ++i) {
         output = write_instruction_line(output, instructions[i], 0);
 
-        total_bytes += instruction_bytes[i];
+        current_bytes += instruction_bytes[i];
         // Insert label if required
-        if (next_label_index >= 0 && total_bytes == label_indices[next_label_index]) {
+        if (next_label_index >= 0 && current_bytes == label_indices[next_label_index]) {
             char* label_line = get_label_line(next_label_index+1);
             output = append_chars(output, label_line);
             free(label_line);
             labels_inserted++;
-            next_label_index = get_next_label_index(total_bytes, label_count, label_indices);
+            next_label_index = get_next_label_index(current_bytes, label_count, label_indices);
         }
     }
 
@@ -711,13 +720,22 @@ Bytes write_disassembly(Instruction* instructions, s32* instruction_bytes, s32 i
 }
 
 // Simulate instructions, printing out simulated instruction and state
-Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instruction_count) {
+Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instruction_count, s32* bytes_to_instruction) {
     Bytes output;
     Context context; // Simulated processor context
 
-    for (int i = 0; i < instruction_count; ++i) {
-        char* log_str = simulate_instruction(instructions[i], &context);
-        output = write_instruction_line(output, instructions[i], log_str);
+    while(context.ip <= instruction_bytes[instruction_count-1]) {
+        s32 current_instruction = bytes_to_instruction[context.ip];
+        if (current_instruction < 0) {
+            // No valid instruction at this byte offset. Error.
+            Assert(!"IP invalid.");
+            return output;
+        }
+        // Advance instruction pointer, this happens before the instruction
+        u16 ip_before = context.ip;
+        context.ip += instruction_bytes[current_instruction];
+        char* log_str = simulate_instruction(instructions[current_instruction], &context, ip_before);
+        output = write_instruction_line(output, instructions[current_instruction], log_str);
         if (log_str) free(log_str);
     }
 
@@ -730,6 +748,12 @@ void process(Bytes asm_file, const char* output_path, bool exec)
 {
     // Save number of bytes output for each instruction
     s32* instruction_bytes = (s32*)malloc(asm_file.size*sizeof(s32));
+    s32* bytes_to_instruction = (s32*)malloc(asm_file.size*sizeof(s32));
+    for (int i = 0; i < asm_file.size; ++i) {
+        instruction_bytes[i] = 0;
+        bytes_to_instruction[i] = -1;
+    }
+
 
     // Save index of each label found.
     s32* label_indices = (s32*)malloc(MAX_LABELS*sizeof(s32));
@@ -742,6 +766,7 @@ void process(Bytes asm_file, const char* output_path, bool exec)
     while (current < asm_file.size) {
         s32 prev = current;
 
+        bytes_to_instruction[current] = instruction_count;
         instructions[instruction_count] = decode_instruction(asm_file, &current, label_indices, &label_count);
         Assert(instruction_count < MAX_INSTRUCTIONS);
         if (current == prev) {
@@ -755,7 +780,7 @@ void process(Bytes asm_file, const char* output_path, bool exec)
     Bytes output;
     if (exec) {
         // Simulate and output each instruction simulated
-        output = simulate(instructions, instruction_bytes, instruction_count);
+        output = simulate(instructions, instruction_bytes, instruction_count, bytes_to_instruction);
     } else {
         // Just output all of the instructions in sequence
         output = write_disassembly(instructions, instruction_bytes, instruction_count, label_indices, label_count);
@@ -773,13 +798,18 @@ s32 APIENTRY WinMain(HINSTANCE instance,
                      LPTSTR cmd_line,
                      int show)
 {
-    Bytes bytes = read_entire_file("../data/listing_0046_add_sub_cmp");
-    process(bytes, "../output/listing_0046_add_sub_cmp.log", true);
+    Bytes bytes = read_entire_file("../data/listing_0048_ip_register");
+    process(bytes, "../output/listing_0048_ip_register.log", true);
     free(bytes.buffer);
     bytes = {};
 
-    bytes = read_entire_file("../data/listing_0047_challenge_flags");
-    process(bytes, "../output/listing_0047_challenge_flags.log", true);
+    bytes = read_entire_file("../data/listing_0049_conditional_jumps");
+    process(bytes, "../output/listing_0049_conditional_jumps.log", true);
+    free(bytes.buffer);
+    bytes = {};
+
+    bytes = read_entire_file("../data/listing_0050_challenge_jumps");
+    process(bytes, "../output/listing_0050_challenge_jumps.log", true);
     free(bytes.buffer);
     bytes = {};
 
