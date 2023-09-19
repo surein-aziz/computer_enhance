@@ -679,13 +679,55 @@ Bytes write_end_context(Bytes bytes, Context* context) {
     return out;
 }
 
+// Write all instructions producing a disassembled asm file which could be reassembled
+Bytes write_disassembly(Instruction* instructions, s32* instruction_bytes, s32 instruction_count, s32* label_indices, s32 label_count) {
+
+    Bytes output;
+
+    // Tell assembler what type of assembly this is with preamble
+    const char* preamble = "bits 16\n";
+    output = append_chars(output, preamble);
+
+    s32 labels_inserted = 0; // All labels should be inserted. Debugging check.
+    s32 total_bytes = 0; // Keep track number of input bytes corresponding to instructions output so far.
+    s32 next_label_index = get_next_label_index(total_bytes, label_count, label_indices);
+    for (int i = 0; i < instruction_count; ++i) {
+        output = write_instruction_line(output, instructions[i], 0);
+
+        total_bytes += instruction_bytes[i];
+        // Insert label if required
+        if (next_label_index >= 0 && total_bytes == label_indices[next_label_index]) {
+            char* label_line = get_label_line(next_label_index+1);
+            output = append_chars(output, label_line);
+            free(label_line);
+            labels_inserted++;
+            next_label_index = get_next_label_index(total_bytes, label_count, label_indices);
+        }
+    }
+
+    Assert(labels_inserted == label_count);
+
+    return output;
+}
+
+// Simulate instructions, printing out simulated instruction and state
+Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instruction_count) {
+    Bytes output;
+    Context context; // Simulated processor context
+
+    for (int i = 0; i < instruction_count; ++i) {
+        char* log_str = simulate_instruction(instructions[i], &context);
+        output = write_instruction_line(output, instructions[i], log_str);
+        if (log_str) free(log_str);
+    }
+
+    output = write_end_context(output, &context);
+    return output;
+}
+
 // disassemble ASM, optionally execute it, and output
 void process(Bytes asm_file, const char* output_path, bool exec)
 {
-    Bytes output;
-    Context context;
-    s32 current = 0;
-
     // Save number of bytes output for each instruction
     s32* instruction_bytes = (s32*)malloc(asm_file.size*sizeof(s32));
 
@@ -696,6 +738,7 @@ void process(Bytes asm_file, const char* output_path, bool exec)
     Instruction* instructions = (Instruction*)malloc(MAX_INSTRUCTIONS*sizeof(Instruction));
     int instruction_count = 0;
     
+    s32 current = 0;
     while (current < asm_file.size) {
         s32 prev = current;
 
@@ -709,39 +752,14 @@ void process(Bytes asm_file, const char* output_path, bool exec)
         instruction_count++;
     }
 
-    // Output to bytes ready to be output to file.
-    const char* preamble = "bits 16\n";
-    output = append_chars(output, preamble);
-
-    s32 labels_inserted = 0; // All labels should be inserted. Debugging check.
-    s32 total_bytes = 0; // Keep track number of input bytes corresponding to instructions output so far.
-    s32 next_label_index = get_next_label_index(total_bytes, label_count, label_indices);
-    for (int i = 0; i < instruction_count; ++i) {
-        char* log_str = 0;
-       if (exec) {
-            log_str = simulate_instruction(instructions[i], &context);
-        }
-        output = write_instruction_line(output, instructions[i], log_str);
-        if (log_str) {
-            free(log_str);
-        }
-
-        total_bytes += instruction_bytes[i];
-        // Insert label if required
-        if (next_label_index >= 0 && total_bytes == label_indices[next_label_index]) {
-            char* label_line = get_label_line(next_label_index+1);
-            output = append_chars(output, label_line);
-            free(label_line);
-            labels_inserted++;
-            next_label_index = get_next_label_index(total_bytes, label_count, label_indices);
-        }
-    }
-
+    Bytes output;
     if (exec) {
-        output = write_end_context(output, &context);
+        // Simulate and output each instruction simulated
+        output = simulate(instructions, instruction_bytes, instruction_count);
+    } else {
+        // Just output all of the instructions in sequence
+        output = write_disassembly(instructions, instruction_bytes, instruction_count, label_indices, label_count);
     }
-
-    Assert(labels_inserted == label_count);
 
     free(instructions);
     free(instruction_bytes);
@@ -756,12 +774,12 @@ s32 APIENTRY WinMain(HINSTANCE instance,
                      int show)
 {
     Bytes bytes = read_entire_file("../data/listing_0046_add_sub_cmp");
-    process(bytes, "../output/listing_0046_add_sub_cmp.asm", true);
+    process(bytes, "../output/listing_0046_add_sub_cmp.log", true);
     free(bytes.buffer);
     bytes = {};
 
     bytes = read_entire_file("../data/listing_0047_challenge_flags");
-    process(bytes, "../output/listing_0047_challenge_flags.asm", true);
+    process(bytes, "../output/listing_0047_challenge_flags.log", true);
     free(bytes.buffer);
     bytes = {};
 
