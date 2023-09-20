@@ -48,7 +48,11 @@ struct Context {
     // CF Carry Flag
     u16 flags = 0;
 
+    // Instruction pointer
     u16 ip = 0;
+
+    // Memory
+    u8 memory[1 << 20];
 };
 
 enum class InstrType {

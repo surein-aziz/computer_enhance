@@ -445,15 +445,47 @@ char* flags_str(u16 flags) {
     return flags_string;
 }
 
-void get_operands(Instruction instruction, Context* context, u8* byte1, u8* byte2, u16* bytes, u8** dest, u16* before) {
-    if (instruction.operands[0].type != OperandType::REGISTER) {
-        Assert(!"Not implemented yet");
-        return;
+u8* get_memory(MemoryAddress address, s32 displacement, Context* context) {
+    switch (address) {
+        case MemoryAddress::DIRECT:
+            return context->memory + displacement;
+        case MemoryAddress::BX_SI:
+            return context->memory + context->bx + context->si + displacement;
+        case MemoryAddress::BX_DI:
+            return context->memory + context->bx + context->di + displacement;
+        case MemoryAddress::BP_SI:
+            return context->memory + context->bp + context->si + displacement;
+        case MemoryAddress::BP_DI:
+            return context->memory + context->bp + context->di + displacement;
+        case MemoryAddress::SI:
+            return context->memory + context->si + displacement;
+        case MemoryAddress::DI:
+            return context->memory + context->di + displacement;
+        case MemoryAddress::BP:
+            return context->memory + context->bp + displacement;
+        case MemoryAddress::BX:
+            return context->memory + context->bx + displacement;
+        case MemoryAddress::NONE:
+        case MemoryAddress::COUNT:
+            break;
     }
+    Assert(!"Invalid memory address");
+    return 0;
+}
+
+void get_data_operands(Instruction instruction, Context* context, u8* byte1, u8* byte2, u16* bytes, u8** dest, u16* before) {
 
     u16 dest_bytes = 0;
     u16 source_bytes = 0;
-    *dest = get_register(instruction.operands[0].reg, context, &dest_bytes);
+    if (instruction.operands[0].type == OperandType::REGISTER) {
+        *dest = get_register(instruction.operands[0].reg, context, &dest_bytes);
+    } else if (instruction.operands[0].type == OperandType::MEMORY) {
+        *dest = get_memory(instruction.operands[0].address, instruction.operands[0].displacement, context);
+        dest_bytes = 2;
+    } else {
+        Assert(!"Invalid data source.");
+        return;
+    }
     if (instruction.operands[1].type == OperandType::REGISTER) {
         u8* source_reg = get_register(instruction.operands[1].reg, context, &source_bytes);
         if (dest_bytes == 2 && source_bytes == 2) {
@@ -463,6 +495,18 @@ void get_operands(Instruction instruction, Context* context, u8* byte1, u8* byte
         } else {
             Assert(dest_bytes >= 1 && source_bytes >= 1);
             *byte1 = source_reg[0];
+            *bytes = 1;
+        }
+    } else if (instruction.operands[1].type == OperandType::MEMORY) {
+        u8* source_mem = get_memory(instruction.operands[1].address, instruction.operands[1].displacement, context);
+        source_bytes = 2;
+        if (dest_bytes == 2 && source_bytes == 2) {
+            *byte1 = source_mem[0];
+            *byte2 = source_mem[1];
+            *bytes = 2;
+        } else {
+            Assert(dest_bytes >= 1 && source_bytes >= 1);
+            *byte1 = source_mem[0];
             *bytes = 1;
         }
     } else if (instruction.operands[1].type == OperandType::IMMEDIATE) {
@@ -478,7 +522,7 @@ void get_operands(Instruction instruction, Context* context, u8* byte1, u8* byte
             *bytes = 1;
         }
     } else {
-        Assert(!"Not implemented yet");
+        Assert(!"Invalid data destination.");
         return;
     }
 
@@ -505,7 +549,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
     // Update data
     if (instruction.type == InstrType::MOV) {
         data_op = true;
-        get_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before);
+        get_data_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before);
 
         dest[0] = byte1;
         if (bytes == 2) {
@@ -514,7 +558,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
     } else if (instruction.type == InstrType::ADD) {
         set_flags = true;
         data_op = true;
-        get_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before);
+        get_data_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before);
 
         if (bytes == 1) {
             result_wide = dest[0]+byte1;
@@ -527,7 +571,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
     } else if (instruction.type == InstrType::SUB || instruction.type == InstrType::CMP) {
         set_flags = true;
         data_op = true;
-        get_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before);
+        get_data_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before);
 
         if (bytes == 1) {
             result_wide = dest[0] - byte1;
@@ -713,7 +757,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
     }
 
     char* log_str = 0;
-    if (data_op && before != after) {
+    if (data_op && (before != after) && (instruction.operands[0].type == OperandType::REGISTER)) {
         log_str = (char*)malloc(200*sizeof(char));
         strcpy(log_str, reg_str(instruction.operands[0].reg));
         sprintf(log_str+strlen(log_str), ":%#x->%#x", before, after);
