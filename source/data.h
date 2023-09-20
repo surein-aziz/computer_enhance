@@ -52,7 +52,7 @@ struct Context {
     u16 ip = 0;
 
     // Memory
-    u8 memory[1 << 20];
+    u8* memory = 0;
 };
 
 enum class InstrType {

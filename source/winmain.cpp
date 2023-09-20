@@ -871,6 +871,7 @@ Bytes write_disassembly(Instruction* instructions, s32* instruction_bytes, s32 i
 Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instruction_count, s32* bytes_to_instruction, s32 total_bytes) {
     Bytes output;
     Context context; // Simulated processor context
+    context.memory = (u8*)malloc((1 << 20)*sizeof(u8));
 
     while(context.ip < total_bytes) {
         s32 current_instruction = bytes_to_instruction[context.ip];
@@ -888,6 +889,7 @@ Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instructio
     }
 
     output = write_end_context(output, &context);
+    free(context.memory);
     return output;
 }
 
