@@ -902,18 +902,18 @@ s32 APIENTRY WinMain(HINSTANCE instance,
                      LPTSTR cmd_line,
                      int show)
 {
-    Bytes bytes = read_entire_file("../data/listing_0048_ip_register");
-    process(bytes, "../output/listing_0048_ip_register.txt", true);
+    Bytes bytes = read_entire_file("../data/listing_0051_memory_mov");
+    process(bytes, "../output/listing_0051_memory_mov.txt", true);
     free(bytes.buffer);
     bytes = {};
 
-    bytes = read_entire_file("../data/listing_0049_conditional_jumps");
-    process(bytes, "../output/listing_0049_conditional_jumps.txt", true);
+    bytes = read_entire_file("../data/listing_0052_memory_add_loop");
+    process(bytes, "../output/listing_0052_memory_add_loop.txt", true);
     free(bytes.buffer);
     bytes = {};
 
-    bytes = read_entire_file("../data/listing_0050_challenge_jumps");
-    process(bytes, "../output/listing_0050_challenge_jumps.txt", true);
+    bytes = read_entire_file("../data/listing_0053_add_loop_challenge");
+    process(bytes, "../output/listing_0053_add_loop_challenge.txt", true);
     free(bytes.buffer);
     bytes = {};
 
