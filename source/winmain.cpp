@@ -599,7 +599,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
         if (!(context->flags & ZERO_FLAG)) context->ip += instruction.operands[0].offset;
     } else if (instruction.type == InstrType::LOOPNZ) {
         Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
-        // Subtract one from CX then check the flag.
+        // Subtract one from CX then loop if cx not zero and zero flag not set
         Instruction implicit_sub;
         implicit_sub.type = InstrType::SUB;
         implicit_sub.operands[0].type = OperandType::REGISTER;
@@ -609,10 +609,33 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
         implicit_sub.operands[1].immediate = 1;
         char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, true);
         if (implicit_log) free(implicit_log); // Just ignore log of implicit instruction for now
-        u16 temp = 0;
-        u8* cx = get_register(Register::CX, context, &temp);
-        u16 cx16 = cx[0] | cx[1] << 8;
-        if (!(context->flags & ZERO_FLAG) && (cx16 != 0)) context->ip += instruction.operands[0].offset;
+        if (!(context->flags & ZERO_FLAG) && (context->cx != 0)) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::LOOPZ) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        // Subtract one from CX then loop if cx not zero and zero flag set
+        Instruction implicit_sub;
+        implicit_sub.type = InstrType::SUB;
+        implicit_sub.operands[0].type = OperandType::REGISTER;
+        implicit_sub.operands[0].reg = Register::CX;
+        implicit_sub.operands[1].type = OperandType::IMMEDIATE;
+        implicit_sub.operands[1].byte = false;
+        implicit_sub.operands[1].immediate = 1;
+        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, true);
+        if (implicit_log) free(implicit_log); // Just ignore log of implicit instruction for now
+        if ((context->flags & ZERO_FLAG) && (context->cx != 0)) context->ip += instruction.operands[0].offset;
+    } else if (instruction.type == InstrType::LOOP) {
+        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
+        // Subtract one from CX then loop if cx not zero
+        Instruction implicit_sub;
+        implicit_sub.type = InstrType::SUB;
+        implicit_sub.operands[0].type = OperandType::REGISTER;
+        implicit_sub.operands[0].reg = Register::CX;
+        implicit_sub.operands[1].type = OperandType::IMMEDIATE;
+        implicit_sub.operands[1].byte = false;
+        implicit_sub.operands[1].immediate = 1;
+        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, true);
+        if (implicit_log) free(implicit_log); // Just ignore log of implicit instruction for now
+        if ((context->cx != 0)) context->ip += instruction.operands[0].offset;
     /* TODO(surein): more conditional jumps that weren't tested in the course. Implement if I can be bothered.
     } else if (instruction.type == InstrType::JL) {
         Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
@@ -648,12 +671,6 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
         Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
         if (context->flags & ) context->ip += instruction.operands[0].offset;
     } else if (instruction.type == InstrType::JNS) {
-        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
-        if (context->flags & ) context->ip += instruction.operands[0].offset;
-    } else if (instruction.type == InstrType::LOOP) {
-        Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
-        if (context->flags & ) context->ip += instruction.operands[0].offset;
-    } else if (instruction.type == InstrType::LOOPZ) {
         Assert(instruction.operands[0].type == OperandType::JUMP_OFFSET);
         if (context->flags & ) context->ip += instruction.operands[0].offset;
     } else if (instruction.type == InstrType::JCXZ) {
