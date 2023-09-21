@@ -868,10 +868,11 @@ Bytes write_disassembly(Instruction* instructions, s32* instruction_bytes, s32 i
 }
 
 // Simulate instructions, printing out simulated instruction and state
-Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instruction_count, s32* bytes_to_instruction, s32 total_bytes) {
+Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instruction_count, s32* bytes_to_instruction, s32 total_bytes, const char* dump_path) {
     Bytes output;
     Context context; // Simulated processor context
-    context.memory = (u8*)malloc((1 << 20)*sizeof(u8));
+    s32 memory_size = 1 << 20;
+    context.memory = (u8*)malloc(memory_size*sizeof(u8));
 
     while(context.ip < total_bytes) {
         s32 current_instruction = bytes_to_instruction[context.ip];
@@ -889,12 +890,17 @@ Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instructio
     }
 
     output = write_end_context(output, &context);
+
+    if (dump_path) {
+        Bytes dump = {context.memory, memory_size};
+        write_entire_file(dump, dump_path);
+    }
     free(context.memory);
     return output;
 }
 
 // disassemble ASM, optionally execute it, and output
-void process(Bytes asm_file, const char* output_path, bool exec)
+void process(Bytes asm_file, const char* output_path, bool exec, const char* dump_path)
 {
     // Save number of bytes output for each instruction
     s32* instruction_bytes = (s32*)malloc(asm_file.size*sizeof(s32));
@@ -930,7 +936,7 @@ void process(Bytes asm_file, const char* output_path, bool exec)
     Bytes output;
     if (exec) {
         // Simulate and output each instruction simulated
-        output = simulate(instructions, instruction_bytes, instruction_count, bytes_to_instruction, asm_file.size);
+        output = simulate(instructions, instruction_bytes, instruction_count, bytes_to_instruction, asm_file.size, dump_path);
     } else {
         // Just output all of the instructions in sequence
         output = write_disassembly(instructions, instruction_bytes, instruction_count, label_indices, label_count);
@@ -948,18 +954,13 @@ s32 APIENTRY WinMain(HINSTANCE instance,
                      LPTSTR cmd_line,
                      int show)
 {
-    Bytes bytes = read_entire_file("../data/listing_0051_memory_mov");
-    process(bytes, "../output/listing_0051_memory_mov.txt", true);
+    Bytes bytes = read_entire_file("../data/listing_0054_draw_rectangle");
+    process(bytes, "../output/listing_0054_draw_rectangle.txt", true, "../output/listing_0054_dump.bin");
     free(bytes.buffer);
     bytes = {};
 
-    bytes = read_entire_file("../data/listing_0052_memory_add_loop");
-    process(bytes, "../output/listing_0052_memory_add_loop.txt", true);
-    free(bytes.buffer);
-    bytes = {};
-
-    bytes = read_entire_file("../data/listing_0053_add_loop_challenge");
-    process(bytes, "../output/listing_0053_add_loop_challenge.txt", true);
+    bytes = read_entire_file("../data/listing_0055_challenge_rectangle");
+    process(bytes, "../output/listing_0055_challenge_rectangle.txt", true, "../output/listing_0055_dump.bin");
     free(bytes.buffer);
     bytes = {};
 
