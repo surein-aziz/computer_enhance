@@ -445,26 +445,26 @@ char* flags_str(u16 flags) {
     return flags_string;
 }
 
-u8* get_memory(MemoryAddress address, s32 displacement, Context* context) {
+s32 get_memory(MemoryAddress address, s32 displacement, Context* context) {
     switch (address) {
         case MemoryAddress::DIRECT:
-            return context->memory + displacement;
+            return displacement;
         case MemoryAddress::BX_SI:
-            return context->memory + context->bx + context->si + displacement;
+            return context->bx + context->si + displacement;
         case MemoryAddress::BX_DI:
-            return context->memory + context->bx + context->di + displacement;
+            return context->bx + context->di + displacement;
         case MemoryAddress::BP_SI:
-            return context->memory + context->bp + context->si + displacement;
+            return context->bp + context->si + displacement;
         case MemoryAddress::BP_DI:
-            return context->memory + context->bp + context->di + displacement;
+            return context->bp + context->di + displacement;
         case MemoryAddress::SI:
-            return context->memory + context->si + displacement;
+            return context->si + displacement;
         case MemoryAddress::DI:
-            return context->memory + context->di + displacement;
+            return context->di + displacement;
         case MemoryAddress::BP:
-            return context->memory + context->bp + displacement;
+            return context->bp + displacement;
         case MemoryAddress::BX:
-            return context->memory + context->bx + displacement;
+            return context->bx + displacement;
         case MemoryAddress::NONE:
         case MemoryAddress::COUNT:
             break;
@@ -473,14 +473,15 @@ u8* get_memory(MemoryAddress address, s32 displacement, Context* context) {
     return 0;
 }
 
-void get_data_operands(Instruction instruction, Context* context, u8* byte1, u8* byte2, u16* bytes, u8** dest, u16* before) {
+void get_data_operands(Instruction instruction, Context* context, u8* byte1, u8* byte2, u16* bytes, u8** dest, u16* before, s32* op0addr, s32* op1addr) {
 
     u16 dest_bytes = 0;
     u16 source_bytes = 0;
     if (instruction.operands[0].type == OperandType::REGISTER) {
         *dest = get_register(instruction.operands[0].reg, context, &dest_bytes);
     } else if (instruction.operands[0].type == OperandType::MEMORY) {
-        *dest = get_memory(instruction.operands[0].address, instruction.operands[0].displacement, context);
+        *op0addr = get_memory(instruction.operands[0].address, instruction.operands[0].displacement, context);
+        *dest = context->memory + *op0addr;
         dest_bytes = 2;
     } else {
         Assert(!"Invalid data source.");
@@ -498,7 +499,8 @@ void get_data_operands(Instruction instruction, Context* context, u8* byte1, u8*
             *bytes = 1;
         }
     } else if (instruction.operands[1].type == OperandType::MEMORY) {
-        u8* source_mem = get_memory(instruction.operands[1].address, instruction.operands[1].displacement, context);
+        *op1addr = get_memory(instruction.operands[1].address, instruction.operands[1].displacement, context);
+        u8* source_mem = context->memory + *op1addr;
         source_bytes = 2;
         if (dest_bytes == 2 && source_bytes == 2) {
             *byte1 = source_mem[0];
@@ -533,6 +535,176 @@ void get_data_operands(Instruction instruction, Context* context, u8* byte1, u8*
     }
 }
 
+bool is_memory(Operand* op) {
+    return op->type == OperandType::MEMORY;
+}
+
+bool is_accumulator(Operand* op) {
+    return op->type == OperandType::REGISTER && (op->reg == Register::AX || op->reg == Register::AL || op->reg == Register::AH);
+}
+
+bool is_register(Operand* op) {
+    return op->type == OperandType::REGISTER;
+}
+
+bool is_immediate(Operand* op) {
+    return op->type == OperandType::IMMEDIATE;
+}
+
+s32 ea_clocks(Operand* op) {
+    Assert(is_memory(op));
+    bool disp = (op->displacement != 0);
+    switch(op->address) {
+        case MemoryAddress::BP_DI:
+        case MemoryAddress::BX_SI:
+            return disp ? 11 : 7;
+        case MemoryAddress::BP_SI:
+        case MemoryAddress::BX_DI:
+            return disp ? 12 : 8;
+        case MemoryAddress::SI:
+        case MemoryAddress::DI:
+        case MemoryAddress::BP:
+        case MemoryAddress::BX:
+            return disp ? 9 : 5;
+        case MemoryAddress::DIRECT:
+            return 6;
+        case MemoryAddress::NONE:
+        case MemoryAddress::COUNT:
+            break;
+    }
+    Assert(!"Invalid memory address");
+    return 0;
+}
+
+void clocks_for_instruction(Instruction instruction, u16 bytes, s32 op0addr, s32 op1addr, s32* clocks_base, s32* clocks_ea) {
+    Operand* op0 = &(instruction.operands[0]);
+    Operand* op1 = &(instruction.operands[1]);
+    *clocks_base = 0;
+    *clocks_ea = 0;
+    switch (instruction.type) {
+        case InstrType::MOV:
+            {
+                if (is_memory(op0) && is_accumulator(op1)) {
+                    *clocks_base = 10;
+                    Assert(op0addr != 0);
+                    if (bytes == 2 && ((op0addr % 2) == 1)) {
+                        *clocks_base += 4;
+                    }
+                    return;
+                }
+                if (is_accumulator(op0) && is_memory(op1)) {
+                    *clocks_base = 10;
+                    Assert(op1addr != 0);
+                    if (bytes == 2 && ((op1addr % 2) == 1)) {
+                        *clocks_base += 4;
+                    }
+                    return;
+                }
+                if (is_register(op0) && is_register(op1)) {
+                    *clocks_base = 2;
+                    return;
+                }
+                if (is_register(op0) && is_memory(op1)) {
+                    *clocks_base = 8;
+                    *clocks_ea = ea_clocks(op1);
+                    Assert(op1addr != 0);
+                    if (bytes == 2 && ((op1addr % 2) == 1)) {
+                        *clocks_base += 4;
+                    }
+                    return;
+                }
+                if (is_memory(op0) && is_register(op1)) {
+                    *clocks_base = 9;
+                    *clocks_ea = ea_clocks(op0);
+                    Assert(op0addr != 0);
+                    if (bytes == 2 && ((op0addr % 2) == 1)) {
+                        *clocks_base += 4;
+                    }
+                    return;
+                }
+                if (is_register(op0) && is_immediate(op1)) {
+                    *clocks_base = 4;
+                    return;
+                }
+                if (is_memory(op0) && is_immediate(op1)) {
+                    *clocks_base = 10;
+                    *clocks_ea = ea_clocks(op0);
+                    Assert(op0addr != 0);
+                    if (bytes == 2 && ((op0addr % 2) == 1)) {
+                        *clocks_base += 4;
+                    }
+                    return;
+                }
+                break;
+            }
+        case InstrType::ADD:
+            {
+                if (is_register(op0) && is_register(op1)) {
+                    *clocks_base = 3;
+                    return;
+                }
+                if (is_register(op0) && is_memory(op1)) {
+                    *clocks_base = 9;
+                    *clocks_ea = ea_clocks(op1);
+                    Assert(op1addr != 0);
+                    if (bytes == 2 && ((op1addr % 2) == 1)) {
+                        *clocks_base += 4;
+                    }
+                    return;
+                }
+                if (is_memory(op0) && is_register(op1)) {
+                    *clocks_base = 16;
+                    *clocks_ea = ea_clocks(op0);
+                    Assert(op0addr != 0);
+                    if (bytes == 2 && ((op0addr % 2) == 1)) {
+                        *clocks_base += 8;
+                    }
+                    return;
+                }
+                if (is_register(op0) && is_immediate(op1)) {
+                    *clocks_base = 4;
+                    return;
+                }
+                if (is_memory(op0) && is_immediate(op1)) {
+                    *clocks_base = 17;
+                    *clocks_ea = ea_clocks(op0);
+                    Assert(op0addr != 0);
+                    if (bytes == 2 && ((op0addr % 2) == 1)) {
+                        *clocks_base += 8;
+                    }
+                    return;
+                }
+                break;
+            }
+        case InstrType::SUB:
+        case InstrType::CMP: 
+        case InstrType::JE:
+        case InstrType::JL:
+        case InstrType::JLE:
+        case InstrType::JB:
+        case InstrType::JBE:
+        case InstrType::JP:
+        case InstrType::JO:
+        case InstrType::JS:
+        case InstrType::JNE:
+        case InstrType::JNL:
+        case InstrType::JG:
+        case InstrType::JNB:
+        case InstrType::JA:
+        case InstrType::JNP:
+        case InstrType::JNO:
+        case InstrType::JNS:
+        case InstrType::LOOP:
+        case InstrType::LOOPZ:
+        case InstrType::LOOPNZ:
+        case InstrType::JCXZ: 
+        case InstrType::NONE:
+        case InstrType::COUNT:
+            break;
+    }
+    Assert(!"Invalid instruction.");
+}
+
 char* simulate_instruction(Instruction instruction, Context* context, u16 ip_before, bool count_clocks, bool implicit) {
 
     u8 byte1 = 0;
@@ -540,6 +712,8 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
     u16 bytes = 0;
     u8* dest = 0;
     u16 before = 0;
+    s32 op0addr = 0;
+    s32 op1addr = 0;
     u16 flags_before = context->flags;
     bool data_op = false;
 
@@ -549,7 +723,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
     // Update data
     if (instruction.type == InstrType::MOV) {
         data_op = true;
-        get_data_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before);
+        get_data_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before, &op0addr, &op1addr);
 
         dest[0] = byte1;
         if (bytes == 2) {
@@ -558,7 +732,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
     } else if (instruction.type == InstrType::ADD) {
         set_flags = true;
         data_op = true;
-        get_data_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before);
+        get_data_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before, &op0addr, &op1addr);
 
         if (bytes == 1) {
             result_wide = dest[0]+byte1;
@@ -571,7 +745,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
     } else if (instruction.type == InstrType::SUB || instruction.type == InstrType::CMP) {
         set_flags = true;
         data_op = true;
-        get_data_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before);
+        get_data_operands(instruction, context, &byte1, &byte2, &bytes, &dest, &before, &op0addr, &op1addr);
 
         if (bytes == 1) {
             result_wide = dest[0] - byte1;
@@ -779,9 +953,14 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
     if (count_clocks) {
         log_str = (char*)malloc(LOG_LENGTH*sizeof(char));
         log_str[0] = 0;
-        s32 instruction_clocks = 0;//clocks_for_instruction(instruction);
-        context->clocks += instruction_clocks;
-        sprintf(log_str+strlen(log_str), "Clocks: %+d = %d", instruction_clocks, context->clocks);
+        s32 clocks_base = 0;
+        s32 clocks_ea = 0;
+        clocks_for_instruction(instruction, bytes, op0addr, op1addr, &clocks_base, &clocks_ea);
+        context->clocks += clocks_base + clocks_ea;
+        sprintf(log_str+strlen(log_str), "Clocks: %+d = %d", clocks_base + clocks_ea, context->clocks);
+        if (clocks_ea != 0) {
+            sprintf(log_str+strlen(log_str), " (%d + %dea)", clocks_base, clocks_ea);
+        }
     }
     if (data_op && (before != after) && (instruction.operands[0].type == OperandType::REGISTER)) {
         if (log_str) {
