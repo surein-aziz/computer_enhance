@@ -51,6 +51,9 @@ struct Context {
     // Instruction pointer
     u16 ip = 0;
 
+    // Running count of clocks
+    s32 clocks = 0;
+
     // Memory
     u8* memory = 0;
 };

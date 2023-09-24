@@ -533,7 +533,7 @@ void get_data_operands(Instruction instruction, Context* context, u8* byte1, u8*
     }
 }
 
-char* simulate_instruction(Instruction instruction, Context* context, u16 ip_before, bool implicit) {
+char* simulate_instruction(Instruction instruction, Context* context, u16 ip_before, bool count_clocks, bool implicit) {
 
     u8 byte1 = 0;
     u8 byte2 = 0;
@@ -607,7 +607,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
         implicit_sub.operands[1].type = OperandType::IMMEDIATE;
         implicit_sub.operands[1].byte = false;
         implicit_sub.operands[1].immediate = 1;
-        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, true);
+        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, false, true);
         if (implicit_log) free(implicit_log); // Just ignore log of implicit instruction for now
         if (!(context->flags & ZERO_FLAG) && (context->cx != 0)) context->ip += instruction.operands[0].offset;
     } else if (instruction.type == InstrType::LOOPZ) {
@@ -620,7 +620,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
         implicit_sub.operands[1].type = OperandType::IMMEDIATE;
         implicit_sub.operands[1].byte = false;
         implicit_sub.operands[1].immediate = 1;
-        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, true);
+        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, false, true);
         if (implicit_log) free(implicit_log); // Just ignore log of implicit instruction for now
         if ((context->flags & ZERO_FLAG) && (context->cx != 0)) context->ip += instruction.operands[0].offset;
     } else if (instruction.type == InstrType::LOOP) {
@@ -633,7 +633,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
         implicit_sub.operands[1].type = OperandType::IMMEDIATE;
         implicit_sub.operands[1].byte = false;
         implicit_sub.operands[1].immediate = 1;
-        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, true);
+        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, false, true);
         if (implicit_log) free(implicit_log); // Just ignore log of implicit instruction for now
         if ((context->cx != 0)) context->ip += instruction.operands[0].offset;
     /* TODO(surein): more conditional jumps that weren't tested in the course. Implement if I can be bothered.
@@ -774,16 +774,30 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
     }
 
     char* log_str = 0;
+    const s32 LOG_LENGTH = 300;
+
+    if (count_clocks) {
+        log_str = (char*)malloc(LOG_LENGTH*sizeof(char));
+        log_str[0] = 0;
+        s32 instruction_clocks = 0;//clocks_for_instruction(instruction);
+        context->clocks += instruction_clocks;
+        sprintf(log_str+strlen(log_str), "Clocks: %+d = %d", instruction_clocks, context->clocks);
+    }
     if (data_op && (before != after) && (instruction.operands[0].type == OperandType::REGISTER)) {
-        log_str = (char*)malloc(200*sizeof(char));
-        strcpy(log_str, reg_str(instruction.operands[0].reg));
+        if (log_str) {
+            strcat(log_str, " | ");
+        } else {
+            log_str = (char*)malloc(LOG_LENGTH*sizeof(char));
+            log_str[0] = 0;
+        }
+        strcat(log_str, reg_str(instruction.operands[0].reg));
         sprintf(log_str+strlen(log_str), ":%#x->%#x", before, after);
     }
     if (ip_before != context->ip) {
         if (log_str) {
             strcat(log_str, " ");
         } else {
-            log_str = (char*)malloc(200*sizeof(char));
+            log_str = (char*)malloc(LOG_LENGTH*sizeof(char));
             log_str[0] = 0;
         }
         sprintf(log_str+strlen(log_str), "IP:%#x->%#x", ip_before, context->ip);
@@ -792,7 +806,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
         if (log_str) {
             strcat(log_str, " ");
         } else {
-            log_str = (char*)malloc(200*sizeof(char));
+            log_str = (char*)malloc(LOG_LENGTH*sizeof(char));
             log_str[0] = 0;
         }
         strcat(log_str, "FLAGS:");
@@ -885,7 +899,7 @@ Bytes write_disassembly(Instruction* instructions, s32* instruction_bytes, s32 i
 }
 
 // Simulate instructions, printing out simulated instruction and state
-Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instruction_count, s32* bytes_to_instruction, s32 total_bytes, const char* dump_path) {
+Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instruction_count, s32* bytes_to_instruction, s32 total_bytes, bool count_clocks, const char* dump_path) {
     Bytes output;
     Context context; // Simulated processor context
     s32 memory_size = 1 << 20;
@@ -901,7 +915,7 @@ Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instructio
         // Advance instruction pointer, this happens before the instruction
         u16 ip_before = context.ip;
         context.ip += instruction_bytes[current_instruction];
-        char* log_str = simulate_instruction(instructions[current_instruction], &context, ip_before, false);
+        char* log_str = simulate_instruction(instructions[current_instruction], &context, ip_before, count_clocks, false);
         output = write_instruction_line(output, instructions[current_instruction], log_str, true);
         if (log_str) free(log_str);
     }
@@ -917,7 +931,7 @@ Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instructio
 }
 
 // disassemble ASM, optionally execute it, and output
-void process(Bytes asm_file, const char* output_path, bool exec, const char* dump_path)
+void process(Bytes asm_file, const char* output_path, bool exec, bool count_clocks, const char* dump_path)
 {
     // Save number of bytes output for each instruction
     s32* instruction_bytes = (s32*)malloc(asm_file.size*sizeof(s32));
@@ -953,7 +967,7 @@ void process(Bytes asm_file, const char* output_path, bool exec, const char* dum
     Bytes output;
     if (exec) {
         // Simulate and output each instruction simulated
-        output = simulate(instructions, instruction_bytes, instruction_count, bytes_to_instruction, asm_file.size, dump_path);
+        output = simulate(instructions, instruction_bytes, instruction_count, bytes_to_instruction, asm_file.size, count_clocks, dump_path);
     } else {
         // Just output all of the instructions in sequence
         output = write_disassembly(instructions, instruction_bytes, instruction_count, label_indices, label_count);
@@ -972,12 +986,12 @@ s32 APIENTRY WinMain(HINSTANCE instance,
                      int show)
 {
     Bytes bytes = read_entire_file("../data/listing_0056_estimating_cycles");
-    process(bytes, "../output/listing_0056_estimating_cycles.txt", true, 0);
+    process(bytes, "../output/listing_0056_estimating_cycles.txt", true, true, 0);
     free(bytes.buffer);
     bytes = {};
 
     bytes = read_entire_file("../data/listing_0057_challenge_cycles");
-    process(bytes, "../output/listing_0057_challenge_cycles.txt", true, 0);
+    process(bytes, "../output/listing_0057_challenge_cycles.txt", true, true, 0);
     free(bytes.buffer);
     bytes = {};
 
