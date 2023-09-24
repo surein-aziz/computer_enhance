@@ -6,6 +6,13 @@ struct Bytes {
     s32 size = 0;
 };
 
+// Processor type to simulate for clock count
+enum class ClockType {
+    COUNT_NONE,
+    COUNT_8086,
+    COUNT_8088
+};
+
 enum Flags {
     CARRY_FLAG = 1 << 0,
     PARITY_FLAG = 1 << 2,

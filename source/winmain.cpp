@@ -576,7 +576,7 @@ s32 ea_clocks(Operand* op) {
     return 0;
 }
 
-void clocks_for_instruction(Instruction instruction, u16 bytes, s32 op0addr, s32 op1addr, s32* clocks_base, s32* clocks_ea) {
+void clocks_for_instruction(Instruction instruction, u16 bytes, s32 op0addr, s32 op1addr, ClockType clock_type, s32* clocks_base, s32* clocks_ea) {
     Operand* op0 = &(instruction.operands[0]);
     Operand* op1 = &(instruction.operands[1]);
     *clocks_base = 0;
@@ -587,7 +587,9 @@ void clocks_for_instruction(Instruction instruction, u16 bytes, s32 op0addr, s32
                 if (is_memory(op0) && is_accumulator(op1)) {
                     *clocks_base = 10;
                     Assert(op0addr != 0);
-                    if (bytes == 2 && ((op0addr % 2) == 1)) {
+                    if (clock_type == ClockType::COUNT_8086 && bytes == 2 && ((op0addr % 2) == 1)) {
+                        *clocks_base += 4;
+                    } else if (clock_type == ClockType::COUNT_8088 && bytes == 2) {
                         *clocks_base += 4;
                     }
                     return;
@@ -595,7 +597,9 @@ void clocks_for_instruction(Instruction instruction, u16 bytes, s32 op0addr, s32
                 if (is_accumulator(op0) && is_memory(op1)) {
                     *clocks_base = 10;
                     Assert(op1addr != 0);
-                    if (bytes == 2 && ((op1addr % 2) == 1)) {
+                    if (clock_type == ClockType::COUNT_8086 && bytes == 2 && ((op1addr % 2) == 1)) {
+                        *clocks_base += 4;
+                    } else if (clock_type == ClockType::COUNT_8088 && bytes == 2) {
                         *clocks_base += 4;
                     }
                     return;
@@ -608,7 +612,9 @@ void clocks_for_instruction(Instruction instruction, u16 bytes, s32 op0addr, s32
                     *clocks_base = 8;
                     *clocks_ea = ea_clocks(op1);
                     Assert(op1addr != 0);
-                    if (bytes == 2 && ((op1addr % 2) == 1)) {
+                    if (clock_type == ClockType::COUNT_8086 && bytes == 2 && ((op1addr % 2) == 1)) {
+                        *clocks_base += 4;
+                    } else if (clock_type == ClockType::COUNT_8088 && bytes == 2) {
                         *clocks_base += 4;
                     }
                     return;
@@ -617,7 +623,9 @@ void clocks_for_instruction(Instruction instruction, u16 bytes, s32 op0addr, s32
                     *clocks_base = 9;
                     *clocks_ea = ea_clocks(op0);
                     Assert(op0addr != 0);
-                    if (bytes == 2 && ((op0addr % 2) == 1)) {
+                    if (clock_type == ClockType::COUNT_8086 && bytes == 2 && ((op0addr % 2) == 1)) {
+                        *clocks_base += 4;
+                    } else if (clock_type == ClockType::COUNT_8088 && bytes == 2) {
                         *clocks_base += 4;
                     }
                     return;
@@ -630,7 +638,9 @@ void clocks_for_instruction(Instruction instruction, u16 bytes, s32 op0addr, s32
                     *clocks_base = 10;
                     *clocks_ea = ea_clocks(op0);
                     Assert(op0addr != 0);
-                    if (bytes == 2 && ((op0addr % 2) == 1)) {
+                    if (clock_type == ClockType::COUNT_8086 && bytes == 2 && ((op0addr % 2) == 1)) {
+                        *clocks_base += 4;
+                    } else if (clock_type == ClockType::COUNT_8088 && bytes == 2) {
                         *clocks_base += 4;
                     }
                     return;
@@ -647,7 +657,9 @@ void clocks_for_instruction(Instruction instruction, u16 bytes, s32 op0addr, s32
                     *clocks_base = 9;
                     *clocks_ea = ea_clocks(op1);
                     Assert(op1addr != 0);
-                    if (bytes == 2 && ((op1addr % 2) == 1)) {
+                    if (clock_type == ClockType::COUNT_8086 && bytes == 2 && ((op1addr % 2) == 1)) {
+                        *clocks_base += 4;
+                    } else if (clock_type == ClockType::COUNT_8088 && bytes == 2) {
                         *clocks_base += 4;
                     }
                     return;
@@ -656,7 +668,9 @@ void clocks_for_instruction(Instruction instruction, u16 bytes, s32 op0addr, s32
                     *clocks_base = 16;
                     *clocks_ea = ea_clocks(op0);
                     Assert(op0addr != 0);
-                    if (bytes == 2 && ((op0addr % 2) == 1)) {
+                    if (clock_type == ClockType::COUNT_8086 && bytes == 2 && ((op0addr % 2) == 1)) {
+                        *clocks_base += 8;
+                    } else if (clock_type == ClockType::COUNT_8088 && bytes == 2) {
                         *clocks_base += 8;
                     }
                     return;
@@ -669,7 +683,9 @@ void clocks_for_instruction(Instruction instruction, u16 bytes, s32 op0addr, s32
                     *clocks_base = 17;
                     *clocks_ea = ea_clocks(op0);
                     Assert(op0addr != 0);
-                    if (bytes == 2 && ((op0addr % 2) == 1)) {
+                    if (clock_type == ClockType::COUNT_8086 && bytes == 2 && ((op0addr % 2) == 1)) {
+                        *clocks_base += 8;
+                    } else if (clock_type == ClockType::COUNT_8088 && bytes == 2) {
                         *clocks_base += 8;
                     }
                     return;
@@ -705,7 +721,7 @@ void clocks_for_instruction(Instruction instruction, u16 bytes, s32 op0addr, s32
     Assert(!"Invalid instruction.");
 }
 
-char* simulate_instruction(Instruction instruction, Context* context, u16 ip_before, bool count_clocks, bool implicit) {
+char* simulate_instruction(Instruction instruction, Context* context, u16 ip_before, ClockType clock_type, bool implicit) {
 
     u8 byte1 = 0;
     u8 byte2 = 0;
@@ -781,7 +797,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
         implicit_sub.operands[1].type = OperandType::IMMEDIATE;
         implicit_sub.operands[1].byte = false;
         implicit_sub.operands[1].immediate = 1;
-        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, false, true);
+        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, ClockType::COUNT_NONE, true);
         if (implicit_log) free(implicit_log); // Just ignore log of implicit instruction for now
         if (!(context->flags & ZERO_FLAG) && (context->cx != 0)) context->ip += instruction.operands[0].offset;
     } else if (instruction.type == InstrType::LOOPZ) {
@@ -794,7 +810,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
         implicit_sub.operands[1].type = OperandType::IMMEDIATE;
         implicit_sub.operands[1].byte = false;
         implicit_sub.operands[1].immediate = 1;
-        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, false, true);
+        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, ClockType::COUNT_NONE, true);
         if (implicit_log) free(implicit_log); // Just ignore log of implicit instruction for now
         if ((context->flags & ZERO_FLAG) && (context->cx != 0)) context->ip += instruction.operands[0].offset;
     } else if (instruction.type == InstrType::LOOP) {
@@ -807,7 +823,7 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
         implicit_sub.operands[1].type = OperandType::IMMEDIATE;
         implicit_sub.operands[1].byte = false;
         implicit_sub.operands[1].immediate = 1;
-        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, false, true);
+        char* implicit_log = simulate_instruction(implicit_sub, context, context->ip, ClockType::COUNT_NONE, true);
         if (implicit_log) free(implicit_log); // Just ignore log of implicit instruction for now
         if ((context->cx != 0)) context->ip += instruction.operands[0].offset;
     /* TODO(surein): more conditional jumps that weren't tested in the course. Implement if I can be bothered.
@@ -950,12 +966,12 @@ char* simulate_instruction(Instruction instruction, Context* context, u16 ip_bef
     char* log_str = 0;
     const s32 LOG_LENGTH = 300;
 
-    if (count_clocks) {
+    if (clock_type != ClockType::COUNT_NONE) {
         log_str = (char*)malloc(LOG_LENGTH*sizeof(char));
         log_str[0] = 0;
         s32 clocks_base = 0;
         s32 clocks_ea = 0;
-        clocks_for_instruction(instruction, bytes, op0addr, op1addr, &clocks_base, &clocks_ea);
+        clocks_for_instruction(instruction, bytes, op0addr, op1addr, clock_type, &clocks_base, &clocks_ea);
         context->clocks += clocks_base + clocks_ea;
         sprintf(log_str+strlen(log_str), "Clocks: %+d = %d", clocks_base + clocks_ea, context->clocks);
         if (clocks_ea != 0) {
@@ -1078,11 +1094,14 @@ Bytes write_disassembly(Instruction* instructions, s32* instruction_bytes, s32 i
 }
 
 // Simulate instructions, printing out simulated instruction and state
-Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instruction_count, s32* bytes_to_instruction, s32 total_bytes, bool count_clocks, const char* dump_path) {
+Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instruction_count, s32* bytes_to_instruction, s32 total_bytes, ClockType clock_type, const char* dump_path) {
     Bytes output;
     Context context; // Simulated processor context
     s32 memory_size = 1 << 20;
     context.memory = (u8*)malloc(memory_size*sizeof(u8));
+    for (s32 i = 0; i < memory_size; ++i) {
+        context.memory[i] = 0;
+    }
 
     while(context.ip < total_bytes) {
         s32 current_instruction = bytes_to_instruction[context.ip];
@@ -1094,7 +1113,7 @@ Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instructio
         // Advance instruction pointer, this happens before the instruction
         u16 ip_before = context.ip;
         context.ip += instruction_bytes[current_instruction];
-        char* log_str = simulate_instruction(instructions[current_instruction], &context, ip_before, count_clocks, false);
+        char* log_str = simulate_instruction(instructions[current_instruction], &context, ip_before, clock_type, false);
         output = write_instruction_line(output, instructions[current_instruction], log_str, true);
         if (log_str) free(log_str);
     }
@@ -1110,7 +1129,7 @@ Bytes simulate(Instruction* instructions, s32* instruction_bytes, s32 instructio
 }
 
 // disassemble ASM, optionally execute it, and output
-void process(Bytes asm_file, const char* output_path, bool exec, bool count_clocks, const char* dump_path)
+void process(Bytes asm_file, const char* output_path, bool exec, ClockType clock_type, const char* dump_path)
 {
     // Save number of bytes output for each instruction
     s32* instruction_bytes = (s32*)malloc(asm_file.size*sizeof(s32));
@@ -1146,7 +1165,7 @@ void process(Bytes asm_file, const char* output_path, bool exec, bool count_cloc
     Bytes output;
     if (exec) {
         // Simulate and output each instruction simulated
-        output = simulate(instructions, instruction_bytes, instruction_count, bytes_to_instruction, asm_file.size, count_clocks, dump_path);
+        output = simulate(instructions, instruction_bytes, instruction_count, bytes_to_instruction, asm_file.size, clock_type, dump_path);
     } else {
         // Just output all of the instructions in sequence
         output = write_disassembly(instructions, instruction_bytes, instruction_count, label_indices, label_count);
@@ -1165,12 +1184,14 @@ s32 APIENTRY WinMain(HINSTANCE instance,
                      int show)
 {
     Bytes bytes = read_entire_file("../data/listing_0056_estimating_cycles");
-    process(bytes, "../output/listing_0056_estimating_cycles.txt", true, true, 0);
+    process(bytes, "../output/listing_0056_estimating_cycles_8086.txt", true, ClockType::COUNT_8086, 0);
+    process(bytes, "../output/listing_0056_estimating_cycles_8088.txt", true, ClockType::COUNT_8088, 0);
     free(bytes.buffer);
     bytes = {};
 
     bytes = read_entire_file("../data/listing_0057_challenge_cycles");
-    process(bytes, "../output/listing_0057_challenge_cycles.txt", true, true, 0);
+    process(bytes, "../output/listing_0057_challenge_cycles_8086.txt", true, ClockType::COUNT_8086, 0);
+    process(bytes, "../output/listing_0057_challenge_cycles_8088.txt", true, ClockType::COUNT_8088, 0);
     free(bytes.buffer);
     bytes = {};
 
