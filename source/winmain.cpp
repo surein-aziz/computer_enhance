@@ -971,13 +971,13 @@ s32 APIENTRY WinMain(HINSTANCE instance,
                      LPTSTR cmd_line,
                      int show)
 {
-    Bytes bytes = read_entire_file("../data/listing_0054_draw_rectangle");
-    process(bytes, "../output/listing_0054_draw_rectangle.txt", true, "../output/listing_0054_dump.bin");
+    Bytes bytes = read_entire_file("../data/listing_0056_estimating_cycles");
+    process(bytes, "../output/listing_0056_estimating_cycles.txt", true, 0);
     free(bytes.buffer);
     bytes = {};
 
-    bytes = read_entire_file("../data/listing_0055_challenge_rectangle");
-    process(bytes, "../output/listing_0055_challenge_rectangle.txt", true, "../output/listing_0055_dump.bin");
+    bytes = read_entire_file("../data/listing_0057_challenge_cycles");
+    process(bytes, "../output/listing_0057_challenge_cycles.txt", true, 0);
     free(bytes.buffer);
     bytes = {};
 
