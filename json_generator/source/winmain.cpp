@@ -65,7 +65,7 @@ r64 generate(u64 num_pairs, u32 seed, const char* data_output, const char* binar
     for (u64 i = 0; i < num_pairs; ++i) {
         r64 x0, y0, x1, y1;
         if (type == GenType::CLUSTER) {
-            if ((i % (num_pairs/2)) == 0) {
+            if ((i % (num_pairs/5)) == 0) {
                 x0_cluster = rand_x()*0.9;
                 y0_cluster = rand_y()*0.9;
                 x1_cluster = rand_x()*0.9;
