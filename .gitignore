@@ -3,4 +3,4 @@
 bin
 .vs
 output
-homework.ctm
+*.ctm

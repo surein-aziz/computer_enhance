@@ -1,6 +1,6 @@
 @echo off
 
-ctime -begin homework.ctm
+ctime -begin x64_simulator.ctm
 
 set CommonCompilerFlags=-Od -MTd -nologo -fp:fast -fp:except- -GR- -EHa- -Zo -Oi -WX -W4 -wd4996 -wd4244 -wd4201 -wd4100 -wd4189 -wd4505 -wd4127 -wd4577 -FC -Z7 -DDEBUG -DDIRECT3D
 
@@ -13,4 +13,4 @@ cl %CommonCompilerFlags% ..\source\winmain.cpp /link %CommonLinkerFlags%
 set LastError=%ERRORLEVEL%
 popd
 
-ctime -end homework.ctm %LastError%
+ctime -end x64_simulator.ctm %LastError%
