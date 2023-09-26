@@ -104,7 +104,7 @@ s32 APIENTRY WinMain(HINSTANCE instance,
                      LPTSTR cmd_line,
                      int show)
 {
-    u64 num_pairs = 10000;
+    u64 num_pairs = 10000000;
     u32 seed = time(0);
     GenType type = GenType::CLUSTER;
     f64 avg = generate(num_pairs, seed, "../output/data.json", "../output/result.b", type);
