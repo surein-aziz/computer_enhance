@@ -3,28 +3,11 @@
 
 #include "windows.h"
 #include "helpful.h"
+#include "data.h"
 
 // Single unit compilation
 #include "reference_haversine.cpp"
-
-struct Bytes {
-    u8* buffer = 0; // malloced buffer
-    s32 size = 0;
-};
-
-struct HaversineData {
-    f64* x0 = 0;
-    f64* y0 = 0;
-    f64* x1 = 0;
-    f64* y1 = 0;
-    u64 count = 0;
-};
-
-struct HaversineResult {
-    f64* results = 0;
-    f64 average = 0.0;
-    u64 count = 0;
-};
+#include "reference_parser.cpp"
 
 void write_entire_file(Bytes bytes, const char* file_path)
 {
@@ -50,28 +33,6 @@ Bytes read_entire_file(const char* file_path)
     fclose(file);
     
     return bytes;
-}
-
-HaversineData parse_haversine_json(Bytes json) {
-    //TODO(surein): implement
-    return {};
-}
-
-HaversineResult calculate_haversine(HaversineData data) {
-    HaversineResult result;
-    result.results = (f64*)malloc(data.count*sizeof(f64));
-    result.count = data.count;
-
-    // Use an estimate of the earth's radius for the radius, arbitrarily.
-    f64 radius = 6372.8;
-    f64 average = 0.0;
-    for (u64 i = 0; i < result.count; ++i) {
-        result.results[i] = ReferenceHaversine(data.x0[i], data.y0[i], data.x1[i], data.y1[i], radius);
-        average += result.results[i];
-    }
-    average = average / result.count;
-
-    return result;
 }
 
 void compare_results(HaversineResult result, HaversineResult reference_result) {
