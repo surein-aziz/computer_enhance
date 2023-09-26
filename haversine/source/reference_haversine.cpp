@@ -54,7 +54,7 @@ HaversineResult calculate_haversine(HaversineData data) {
         result.results[i] = reference_haversine(data.x0[i], data.y0[i], data.x1[i], data.y1[i], radius);
         average += result.results[i];
     }
-    average = average / result.count;
+    result.average = average / result.count;
 
     return result;
 }

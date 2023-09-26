@@ -31,7 +31,25 @@ Bytes read_entire_file(const char* file_path)
     fseek(file, 0, SEEK_SET);
     fread(bytes.buffer, 1, bytes.size, file);
     fclose(file);
+
+    return bytes;
+}
+
+Bytes read_entire_file_null_term(const char* file_path)
+{
+    Bytes bytes;
     
+    FILE* file = fopen(file_path, "rb");
+    fseek(file, 0, SEEK_END);
+    
+    bytes.size = ftell(file)+1;
+    bytes.buffer = (u8*)malloc(bytes.size);
+    
+    fseek(file, 0, SEEK_SET);
+    fread(bytes.buffer, 1, bytes.size-1, file);
+    fclose(file);
+    bytes.buffer[bytes.size-1] = 0;
+
     return bytes;
 }
 
@@ -56,7 +74,7 @@ s32 APIENTRY WinMain(HINSTANCE instance,
                      int show)
 {
     // Parse json
-    Bytes json = read_entire_file("../data/data_10000000.json");
+    Bytes json = read_entire_file_null_term("../data/data_10000000.json");
     HaversineData data = parse_haversine_json(json);
 
     // Calculate haversines
