@@ -8,6 +8,7 @@
 // Single unit compilation
 #include "reference_haversine.cpp"
 #include "reference_parser.cpp"
+#include "platform_metrics.cpp"
 
 void write_entire_file(Bytes bytes, const char* file_path)
 {
@@ -68,17 +69,23 @@ void compare_results(HaversineResult result, HaversineResult reference_result) {
     }
 }
 
-s32 APIENTRY WinMain(HINSTANCE instance,
-                     HINSTANCE prev_instance,
-                     LPTSTR cmd_line,
-                     int show)
+s32 main(int arg_count, char** args)
 {
+    u64 start_time = read_cpu_timer();
+
     // Parse json
     Bytes json = read_entire_file_null_term("../data/data_10000000.json");
+
+    u64 read_time = read_cpu_timer();
+
     HaversineData data = parse_haversine_json(json);
+
+    u64 parse_time = read_cpu_timer();
 
     // Calculate haversines
     HaversineResult result = calculate_haversine(data);
+
+    u64 haversine_time = read_cpu_timer();
 
     // Parse reference results
     Bytes binary = read_entire_file("../data/result_10000000.b");
@@ -86,8 +93,28 @@ s32 APIENTRY WinMain(HINSTANCE instance,
     f64* f64_buffer = (f64*)binary.buffer;
     HaversineResult reference_result = { f64_buffer, f64_buffer[num], num };
 
+    u64 end_time = read_cpu_timer();
+
     // Compare calculated results with reference results and output
     compare_results(result, reference_result);
+
+    // Output timing information
+    u64 cpu_freq = guess_cpu_freq(100);
+    u64 total_time = end_time - start_time;
+    f64 total_ms = (total_time/(f64)cpu_freq)*1000.0;
+    printf("\nTotal time: %.8gms (CPU freq %llu)\n", total_ms, cpu_freq);
+    u64 read_time_inc = read_time - start_time;
+    f64 read_pct = (read_time_inc/(f64)total_time)*100.0;
+    printf("Read JSON: %llu (%.4g%%)\n", read_time_inc, read_pct);
+    u64 parse_time_inc = parse_time - read_time;
+    f64 parse_pct = (parse_time_inc/(f64)total_time)*100.0;
+    printf("Parse JSON: %llu (%.4g%%)\n", parse_time_inc, parse_pct);
+    u64 haversine_time_inc = haversine_time - parse_time;
+    f64 haversine_pct = (haversine_time_inc/(f64)total_time)*100.0;
+    printf("Calculate Haversines: %llu (%.4g%%)\n", haversine_time_inc, haversine_pct);
+    u64 reference_time_inc = end_time - haversine_time;
+    f64 reference_pct = (reference_time_inc/(f64)total_time)*100.0;
+    printf("Read Reference Data: %llu (%.4g%%)\n", reference_time_inc, reference_pct);
 
     return 0;
 }
