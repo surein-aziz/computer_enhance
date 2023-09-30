@@ -25,6 +25,8 @@ u64 find_char(char* json, u64 length, u64 cursor, char find) {
 }
 
 f64 parse_f64(char* json, u64 length, u64 cursor) {
+    TIME_FUNCTION;
+
     if (cursor >= length) {
         return 0.0;
     }
@@ -32,6 +34,8 @@ f64 parse_f64(char* json, u64 length, u64 cursor) {
 }
 
 HaversineData get_points_array(char* json, u64 length, u64 cursor) {
+    TIME_FUNCTION;
+
     Assert(json[cursor] == '[');
     cursor++;
 

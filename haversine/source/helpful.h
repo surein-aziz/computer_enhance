@@ -595,8 +595,9 @@ struct arr {
             memory = (T*)more_memory;
         }
         
-        zero_from(size);
+        s32 size_old = size;
         size = size_new;
+        zero_from(size_old);
     }
     
     void zero()
