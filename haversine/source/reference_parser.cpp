@@ -71,6 +71,8 @@ HaversineData get_points_array(char* json, u64 length, u64 cursor) {
 }
 
 HaversineData parse_haversine_json(Bytes bytes) {
+    TIME_FUNCTION;
+
     u64 cursor = 0;
     char* json = (char*)bytes.buffer;
     u64 length = bytes.size;

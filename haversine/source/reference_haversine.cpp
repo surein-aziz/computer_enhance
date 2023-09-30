@@ -43,6 +43,8 @@ static f64 reference_haversine(f64 X0, f64 Y0, f64 X1, f64 Y1, f64 earth_radius)
 // END REFERENCE
 
 HaversineResult calculate_haversine(HaversineData data) {
+    TIME_FUNCTION;
+
     HaversineResult result;
     result.results = (f64*)malloc(data.count*sizeof(f64));
     result.count = data.count;
