@@ -11,8 +11,10 @@ static u64 active_index = 0;
 struct TimeInfo {
 	const char* name = 0;
 	u64 count = 0;
-	u64 child_time = 0;
 	u64 cpu_time = 0;
+	u64 child_time = 0;
+	u64 recurse_time = 0;
+	bool recursing = false;
 };
 
 struct TimeScope {
@@ -26,6 +28,10 @@ struct TimeScope {
 		if (active_index) {
 			parent_index = active_index;
 		}
+		if (time_infos[index].recursing) {
+			recursing = true;
+		}
+		time_infos[index].recursing = true;
 		active_index = index;
 		start = read_cpu_timer();
 	}
@@ -35,7 +41,12 @@ struct TimeScope {
 		u64 end = read_cpu_timer();
 		time_infos[index].name = name;
 		time_infos[index].count++;
-		time_infos[index].cpu_time += end - start;
+		if (recursing) {
+			time_infos[index].recurse_time += end - start;
+		} else {
+			time_infos[index].cpu_time += end - start;
+			time_infos[index].recursing = false;
+		}
 		if (parent_index) {
 			time_infos[parent_index].child_time += end - start;
 		}
@@ -46,6 +57,7 @@ struct TimeScope {
 	u64 parent_index = 0;
 	const char* name = 0;
 	u64 start = 0;
+	bool recursing = false;
 };
 
 void time_program_start()
@@ -65,7 +77,7 @@ void time_program_end_and_print()
 	for (u64 i = 1; i < time_infos.size; ++i) {
 		if (!time_infos[i].name) continue;
 		f64 pct = (time_infos[i].cpu_time / (f64)program_time)*100.0;
-		u64 exclusive_time = time_infos[i].cpu_time - time_infos[i].child_time;
+		u64 exclusive_time = time_infos[i].cpu_time + time_infos[i].recurse_time - time_infos[i].child_time;
 		f64 exclusive_pct = (exclusive_time / (f64)program_time)*100.0;
 		printf("%s[%llu] %llu (%.4g%%), exclusive %llu (%.4g%%)\n", time_infos[i].name, time_infos[i].count, time_infos[i].cpu_time, pct, exclusive_time, exclusive_pct);
 	}
