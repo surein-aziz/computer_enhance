@@ -16,10 +16,8 @@ static u64 program_start = 0;
 struct TimeInfo {
 	const char* name = 0;
 	u64 count = 0;
-	u64 cpu_time = 0;
-	u64 child_time = 0;
-	u64 recurse_time = 0;
-	bool recursing = false;
+	u64 inclusive_time = 0;
+	u64 exclusive_time = 0;
 };
 static u64 active_index = 0;
 
@@ -33,27 +31,22 @@ struct TimeScope {
 		if (active_index) {
 			parent_index = active_index;
 		}
-		if (time_infos[index].recursing) {
-			recursing = true;
-		}
-		time_infos[index].recursing = true;
+		inclusive_start = time_infos[index].inclusive_time;
 		active_index = index;
 		start = read_cpu_timer();
 	}
 
 	~TimeScope() {
 		Assert(program_start > 0);
-		u64 end = read_cpu_timer();
+		u64 elapsed = read_cpu_timer() - start;
 		time_infos[index].name = name;
 		time_infos[index].count++;
-		if (recursing) {
-			time_infos[index].recurse_time += end - start;
-		} else {
-			time_infos[index].cpu_time += end - start;
-			time_infos[index].recursing = false;
-		}
+		// Add elapsed to inclusive time when starting this block, overwriting any recursive time.
+		time_infos[index].inclusive_time = inclusive_start + elapsed;
+		// Add elapsed to exclusive time -- this needs to include recursive time and subtract child time.
+		time_infos[index].exclusive_time += elapsed;
 		if (parent_index) {
-			time_infos[parent_index].child_time += end - start;
+			time_infos[parent_index].exclusive_time -= elapsed;
 		}
 		active_index = parent_index;
 	}
@@ -62,7 +55,7 @@ struct TimeScope {
 	u64 parent_index = 0;
 	const char* name = 0;
 	u64 start = 0;
-	bool recursing = false;
+	u64 inclusive_start = 0;
 };
 
 #endif
@@ -84,10 +77,9 @@ void time_program_end_and_print()
 #ifdef PROFILER
 	for (u64 i = 1; i < TOTAL_TIMEINFOS; ++i) {
 		if (!time_infos[i].name) continue;
-		f64 pct = (time_infos[i].cpu_time / (f64)program_time)*100.0;
-		u64 exclusive_time = time_infos[i].cpu_time + time_infos[i].recurse_time - time_infos[i].child_time;
-		f64 exclusive_pct = (exclusive_time / (f64)program_time)*100.0;
-		printf("%s[%llu] %llu (%.4g%%), exclusive %llu (%.4g%%)\n", time_infos[i].name, time_infos[i].count, time_infos[i].cpu_time, pct, exclusive_time, exclusive_pct);
+		f64 pct = (time_infos[i].inclusive_time / (f64)program_time)*100.0;
+		f64 exclusive_pct = (time_infos[i].exclusive_time / (f64)program_time)*100.0;
+		printf("%s[%llu] %llu (%.4g%%), exclusive %llu (%.4g%%)\n", time_infos[i].name, time_infos[i].count, time_infos[i].inclusive_time, pct, time_infos[i].exclusive_time, exclusive_pct);
 	}
 #endif
 }
