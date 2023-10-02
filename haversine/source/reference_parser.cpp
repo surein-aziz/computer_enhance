@@ -33,7 +33,7 @@ f64 parse_f64(char* json, u64 length, u64 cursor) {
 }
 
 HaversineData get_points_array(char* json, u64 length, u64 cursor) {
-    TIME_FUNCTION;
+    TIME_BANDWIDTH(__FUNCTION__, length-cursor);
 
     Assert(json[cursor] == '[');
     cursor++;
@@ -74,7 +74,7 @@ HaversineData get_points_array(char* json, u64 length, u64 cursor) {
 }
 
 HaversineData parse_haversine_json(Bytes bytes) {
-    TIME_FUNCTION;
+    TIME_BANDWIDTH(__FUNCTION__, bytes.size);
 
     u64 cursor = 0;
     char* json = (char*)bytes.buffer;

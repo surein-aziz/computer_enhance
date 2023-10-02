@@ -3,13 +3,16 @@ static u64 program_start = 0;
 
 #ifndef PROFILER
 
+#define TIME_BANDWIDTH
+#define TIME_SCOPE
 #define TIME_FUNCTION
 #define ASSERT_ENOUGH_TIMEINFOS
 #define TOTAL_TIMEINFOS
 
 #else
 
-#define TIME_FUNCTION TimeScope time_scope(__FUNCTION__, __COUNTER__+1)
+#define TIME_BANDWIDTH(Name, ByteCount) TimeScope time_scope(Name, __COUNTER__+1, ByteCount)
+#define TIME_FUNCTION TIME_BANDWIDTH(__FUNCTION__, 0)
 #define ASSERT_ENOUGH_TIMEINFOS static_assert(__COUNTER__ < TOTAL_TIMEINFOS)
 #define TOTAL_TIMEINFOS 4096
 
@@ -18,20 +21,22 @@ struct TimeInfo {
 	u64 count = 0;
 	u64 inclusive_time = 0;
 	u64 exclusive_time = 0;
+	u64 byte_count = 0;
 };
 static u64 active_index = 0;
 
 static TimeInfo time_infos[TOTAL_TIMEINFOS];
 
 struct TimeScope {
-	TimeScope(const char* a_name, s32 counter) {
+	TimeScope(const char* name_, s32 counter, u64 byte_count) {
 		Assert(program_start > 0);
 		index = counter;
-		name = a_name;
+		name = name_;
 		if (active_index) {
 			parent_index = active_index;
 		}
 		inclusive_start = time_infos[index].inclusive_time;
+		time_infos[index].byte_count += byte_count;
 		active_index = index;
 		start = read_cpu_timer();
 	}
@@ -79,7 +84,17 @@ void time_program_end_and_print()
 		if (!time_infos[i].name) continue;
 		f64 pct = (time_infos[i].inclusive_time / (f64)program_time)*100.0;
 		f64 exclusive_pct = (time_infos[i].exclusive_time / (f64)program_time)*100.0;
-		printf("%s[%llu] %llu (%.4g%%), exclusive %llu (%.4g%%)\n", time_infos[i].name, time_infos[i].count, time_infos[i].inclusive_time, pct, time_infos[i].exclusive_time, exclusive_pct);
+		printf("%s[%llu] %llu (%.2f%%), exclusive %llu (%.2f%%)", time_infos[i].name, time_infos[i].count, time_infos[i].inclusive_time, pct, time_infos[i].exclusive_time, exclusive_pct);
+		if (time_infos[i].byte_count > 0) {
+			f64 megabyte = 1024.0*1024.0;
+			f64 gigabyte = megabyte*1024.0;
+
+			f64 seconds = time_infos[i].inclusive_time / (f64)cpu_freq;
+			f64 gigabytes_per_second = time_infos[i].byte_count / (gigabyte*seconds);
+			f64 megabytes = time_infos[i].byte_count / megabyte;
+			printf(" %.2fmb at %.2fgb/s", megabytes, gigabytes_per_second);
+		}
+		printf("\n");
 	}
 #endif
 }

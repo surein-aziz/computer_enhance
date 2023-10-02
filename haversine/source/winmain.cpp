@@ -23,7 +23,7 @@ void write_entire_file(Bytes bytes, const char* file_path)
     fclose(file);
 }
 
-Bytes read_entire_file(const char* file_path)
+Bytes read_entire_file(const char* file_path, bool add_null_term)
 {
     Bytes bytes;
     
@@ -31,31 +31,22 @@ Bytes read_entire_file(const char* file_path)
     fseek(file, 0, SEEK_END);
     
     bytes.size = ftell(file);
+    s32 read_size = bytes.size;
+    if (add_null_term) {
+        bytes.size++;
+    }
     bytes.buffer = (u8*)malloc(bytes.size);
     
-    fseek(file, 0, SEEK_SET);
-    fread(bytes.buffer, 1, bytes.size, file);
-    fclose(file);
+    {
+        TIME_BANDWIDTH("fread", read_size);
 
-    return bytes;
-}
-
-Bytes read_entire_file_null_term(const char* file_path)
-{
-    TIME_FUNCTION;
-
-    Bytes bytes;
-    
-    FILE* file = fopen(file_path, "rb");
-    fseek(file, 0, SEEK_END);
-    
-    bytes.size = ftell(file)+1;
-    bytes.buffer = (u8*)malloc(bytes.size);
-    
-    fseek(file, 0, SEEK_SET);
-    fread(bytes.buffer, 1, bytes.size-1, file);
-    fclose(file);
-    bytes.buffer[bytes.size-1] = 0;
+        fseek(file, 0, SEEK_SET);
+        fread(bytes.buffer, 1, read_size, file);
+        fclose(file);
+        if (add_null_term) {
+            bytes.buffer[bytes.size-1] = 0;
+        }
+    }
 
     return bytes;
 }
@@ -77,9 +68,7 @@ void compare_results(HaversineResult result, HaversineResult reference_result) {
 
 HaversineResult get_reference_results(const char* file_name)
 {
-    TIME_FUNCTION;
-
-    Bytes binary = read_entire_file(file_name);
+    Bytes binary = read_entire_file(file_name, false);
     u64 num = binary.size/(sizeof(f64))-1; // Binary contains each individual result and then the averaged result at the end.
     f64* f64_buffer = (f64*)binary.buffer;
     return { f64_buffer, f64_buffer[num], num };
@@ -90,7 +79,7 @@ s32 main(int arg_count, char** args)
     time_program_start();
 
     // Parse json
-    Bytes json = read_entire_file_null_term("../data/data_10000000.json");
+    Bytes json = read_entire_file("../data/data_10000000.json", true);
     HaversineData data = parse_haversine_json(json);
 
     // Calculate haversines
