@@ -5,6 +5,9 @@
 #include "helpful.h"
 #include "data.h"
 
+// Enable profiler
+#define PROFILER
+
 // Single unit compilation
 #include "platform_metrics.cpp"
 #include "instrumentation.cpp"
@@ -104,3 +107,5 @@ s32 main(int arg_count, char** args)
 
     return 0;
 }
+
+ASSERT_ENOUGH_TIMEINFOS;
