@@ -9,7 +9,7 @@
 #define PROFILER
 
 // Single unit compilation
-#include "platform_metrics.cpp"
+#include "../../common/platform_metrics.cpp"
 #include "instrumentation.cpp"
 #include "reference_haversine.cpp"
 #include "reference_parser.cpp"

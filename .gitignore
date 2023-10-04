@@ -3,5 +3,6 @@
 bin
 .vs
 haversine/data
+repetition_tester/data
 output
 *.ctm
