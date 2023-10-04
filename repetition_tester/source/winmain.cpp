@@ -56,7 +56,6 @@ static void print_time(const char* label, f64 elapsed, u64 count)
     f64 gigabyte = (1024.0 * 1024.0 * 1024.0);
     f64 bandwidth = count / (gigabyte*seconds);
     printf(" %fgb/s", bandwidth);
-    printf("\n");
 }
 
 bool testing()
@@ -75,13 +74,18 @@ bool testing()
         min_elapsed = test_elapsed;
         elapsed_since_min = 0;
     }
+    test_elapsed = 0;
+    begin_end_offset = 0;
+    byte_count = 0;
 
     if (1000.0*(elapsed_since_min / (f64)cpu_freq) > wait_ms) {
         printf("\r");
         print_time("Min", (f64)min_elapsed, target_byte_count);
-        print_time("Max", (f64)max_elapsed, target_byte_count);
-        print_time("Avg", total_elapsed / (f64)total_tests, target_byte_count);
         printf("\n");
+        print_time("Max", (f64)max_elapsed, target_byte_count);
+        printf("\n");
+        print_time("Avg", total_elapsed / (f64)total_tests, target_byte_count);
+        printf("\n\n");
         return false;
     } else {
         printf("\r");
@@ -110,7 +114,7 @@ void count(u64 bytes)
 void test_fread(const char* file_name, Bytes bytes)
 {
     init("fread", bytes.size);
-    while (testing()) {
+    do {
         FILE* file = fopen(file_name, "rb");
         Assert(file);
         
@@ -120,15 +124,15 @@ void test_fread(const char* file_name, Bytes bytes)
         
         count(bytes.size);
         fclose(file);
-    }
+    } while (testing());
 }
 
 void test_read(const char* file_name, Bytes bytes)
 {
     init("_read", bytes.size);
-    while (testing()) {
+    do {
         s32 file = _open(file_name, _O_BINARY|_O_RDONLY);
-        Assert(file == -1);
+        Assert(file != -1);
 
         u8* out = bytes.buffer;
         u64 remaining = bytes.size;
@@ -147,13 +151,13 @@ void test_read(const char* file_name, Bytes bytes)
         }
         
         _close(file);
-    }
+    } while (testing());
 }
 
 void test_read_file(const char* file_name, Bytes bytes)
 {
     init("ReadFile", bytes.size);
-    while (testing()) {
+    do {
         HANDLE file = CreateFileA(file_name, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
         Assert(file != INVALID_HANDLE_VALUE);
 
@@ -175,7 +179,7 @@ void test_read_file(const char* file_name, Bytes bytes)
         }
         
         CloseHandle(file);
-    }
+    } while (testing());
 }
 
 s32 main(int arg_count, char** args)
