@@ -2,7 +2,7 @@
 #include <time.h>
 
 #include "windows.h"
-#include "helpful.h"
+#include "../../common/helpful.h"
 #include "data.h"
 
 // Enable profiler

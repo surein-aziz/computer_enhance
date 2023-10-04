@@ -2,7 +2,7 @@
 #include <time.h>
 
 #include "windows.h"
-#include "helpful.h"
+#include "../../common/helpful.h"
 
 // Single unit compilation
 #include "reference_haversine.cpp"

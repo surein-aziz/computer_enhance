@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "windows.h"
-#include "helpful.h"
+#include "../../common/helpful.h"
 #include "data.h"
 
 // Single unit compilation
