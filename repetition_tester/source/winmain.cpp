@@ -111,31 +111,45 @@ void count(u64 bytes)
     byte_count += bytes;
 }
 
-void test_fread(const char* file_name, Bytes bytes)
+void test_fread(const char* file_name, const char* label, Bytes preallocated_bytes, bool use_preallocated)
 {
-    init("fread", bytes.size);
+    init(label, preallocated_bytes.size);
     do {
+        u8* buffer = preallocated_bytes.buffer;
+        if (!use_preallocated) {
+            buffer = (u8*)malloc(preallocated_bytes.size);
+        }
+        u8* out = buffer;
+
         FILE* file = fopen(file_name, "rb");
         Assert(file);
         
         begin();
-        fread(bytes.buffer, 1, bytes.size, file);
+        fread(out, 1, preallocated_bytes.size, file);
         end();
         
-        count(bytes.size);
+        count(preallocated_bytes.size);
         fclose(file);
+
+        if (!use_preallocated) {
+            free(buffer);
+        }
     } while (testing());
 }
 
-void test_read(const char* file_name, Bytes bytes)
+void test_read(const char* file_name, const char* label, Bytes preallocated_bytes, bool use_preallocated)
 {
-    init("_read", bytes.size);
+    init(label, preallocated_bytes.size);
     do {
         s32 file = _open(file_name, _O_BINARY|_O_RDONLY);
         Assert(file != -1);
 
-        u8* out = bytes.buffer;
-        u64 remaining = bytes.size;
+        u8* buffer = preallocated_bytes.buffer;
+        if (!use_preallocated) {
+            buffer = (u8*)malloc(preallocated_bytes.size);
+        }
+        u8* out = buffer;
+        u64 remaining = preallocated_bytes.size;
         while (remaining > 0) {
             u32 read_size = INT_MAX;
             if ((u64)read_size > remaining) read_size = (u32)remaining;
@@ -151,18 +165,26 @@ void test_read(const char* file_name, Bytes bytes)
         }
         
         _close(file);
+
+        if (!use_preallocated) {
+            free(buffer);
+        }    
     } while (testing());
 }
 
-void test_read_file(const char* file_name, Bytes bytes)
+void test_read_file(const char* file_name, const char* label, Bytes preallocated_bytes, bool use_preallocated)
 {
-    init("ReadFile", bytes.size);
+    init(label, preallocated_bytes.size);
     do {
         HANDLE file = CreateFileA(file_name, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
         Assert(file != INVALID_HANDLE_VALUE);
 
-        u8* out = bytes.buffer;
-        u64 remaining = bytes.size;
+        u8* buffer = preallocated_bytes.buffer;
+        if (!use_preallocated) {
+            buffer = (u8*)malloc(preallocated_bytes.size);
+        }
+        u8* out = buffer;
+        u64 remaining = preallocated_bytes.size;
         while (remaining > 0) {
             u32 read_size = (u32)-1;
             if ((u64)read_size > remaining) read_size = (u32)remaining;
@@ -179,6 +201,10 @@ void test_read_file(const char* file_name, Bytes bytes)
         }
         
         CloseHandle(file);
+
+        if (!use_preallocated) {
+            free(buffer);
+        }
     } while (testing());
 }
 
@@ -192,8 +218,11 @@ s32 main(int arg_count, char** args)
     bytes.buffer = (u8*)malloc(bytes.size);
     fclose(file);
 
-    test_fread(file_name, bytes);
-    test_read(file_name, bytes);
-    test_read_file(file_name, bytes);
+    test_fread(file_name, "fread preallocated", bytes, true);
+    test_read(file_name, "_read preallocated", bytes, true);
+    test_read_file(file_name, "ReadFile preallocated", bytes, true);
+    test_fread(file_name, "fread with allocation", bytes, false);
+    test_read(file_name, "_read with allocation", bytes, false);
+    test_read_file(file_name, "ReadFile with allocation", bytes, false);
     return 0;
 }
