@@ -1,4 +1,28 @@
 #include <intrin.h>
+#include <psapi.h>
+
+struct WindowsMetrics
+{
+	bool initialized = false;
+	HANDLE handle = 0;
+};
+static WindowsMetrics global_metrics;
+
+static void initialize_metrics()
+{
+	Assert(!global_metrics.initialized);
+	global_metrics.initialized = true;
+	global_metrics.handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, GetCurrentProcessId());
+}
+
+static u64 read_os_page_fault_count()
+{
+	Assert(global_metrics.initialized);
+    PROCESS_MEMORY_COUNTERS_EX memory_counters = {};
+    memory_counters.cb = sizeof(memory_counters);
+    GetProcessMemoryInfo(global_metrics.handle, (PROCESS_MEMORY_COUNTERS*)&memory_counters, sizeof(memory_counters));
+    return memory_counters.PageFaultCount;
+}
 
 static u64 get_os_timer_freq()
 {
