@@ -134,6 +134,46 @@ void count(u64 bytes)
     byte_count += bytes;
 }
 
+void test_write_page_faults()
+{
+    u64 page_size = 4096;
+    u64 page_count = 4096;
+    u64 total_size = page_size*page_count;
+
+    for (u64 i = 1; i <= page_count; ++i) {
+        u64 touch_size = page_size*i;
+        u8* data = (u8*)VirtualAlloc(0, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        u64 faults_start = read_os_page_fault_count();
+        for (u64 j = 0; j < touch_size; ++j) {
+            data[j] = (u8)j;
+        }
+        u64 faults = read_os_page_fault_count() - faults_start;
+
+        printf("%llu, %llu, %llu, %lld\n", page_count, i, faults, faults - i);
+        VirtualFree(data, 0, MEM_RELEASE);
+    }
+}
+
+void test_backwards_write_page_faults()
+{
+    u64 page_size = 4096;
+    u64 page_count = 4096;
+    u64 total_size = page_size*page_count;
+
+    for (u64 i = 1; i <= page_count; ++i) {
+        u64 touch_size = page_size*i;
+        u8* data = (u8*)VirtualAlloc(0, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        u64 faults_start = read_os_page_fault_count();
+        for (s64 j = total_size-1; j >= (s64)(total_size - touch_size); --j) {
+            data[j] = (u8)j;
+        }
+        u64 faults = read_os_page_fault_count() - faults_start;
+
+        printf("%llu, %llu, %llu, %lld\n", page_count, i, faults, faults - i);
+        VirtualFree(data, 0, MEM_RELEASE);
+    }
+}
+
 void test_write_bytes(const char* label, Bytes preallocated_bytes, bool use_preallocated)
 {
     init(label, preallocated_bytes.size);
@@ -146,6 +186,30 @@ void test_write_bytes(const char* label, Bytes preallocated_bytes, bool use_prea
 
         begin();
         for (u64 i = 0; i < preallocated_bytes.size; ++i) {
+            out[i] = (u8)i;
+        }
+        end();
+        
+        count(preallocated_bytes.size);
+
+        if (!use_preallocated) {
+            free(buffer);
+        }
+    } while (testing());
+}
+
+void test_write_bytes_backward(const char* label, Bytes preallocated_bytes, bool use_preallocated)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        if (!use_preallocated) {
+            buffer = (u8*)malloc(preallocated_bytes.size);
+        }
+        u8* out = buffer;
+
+        begin();
+        for (s64 i = preallocated_bytes.size-1; i >= 0; --i) {
             out[i] = (u8)i;
         }
         end();
@@ -267,13 +331,17 @@ s32 main(int arg_count, char** args)
     bytes.buffer = (u8*)malloc(bytes.size);
     fclose(file);
 
-    test_write_bytes("write bytes preallocated", bytes, true);
-    test_write_bytes("write bytes with allocation", bytes, false);
-    test_fread(file_name, "fread preallocated", bytes, true);
-    test_fread(file_name, "fread with allocation", bytes, false);
-    test_read(file_name, "_read preallocated", bytes, true);
-    test_read(file_name, "_read with allocation", bytes, false);
-    test_read_file(file_name, "ReadFile preallocated", bytes, true);
-    test_read_file(file_name, "ReadFile with allocation", bytes, false);
+    //test_write_page_faults();
+    test_backwards_write_page_faults();
+    //test_write_bytes("write bytes preallocated", bytes, true);
+    //test_write_bytes("write bytes with allocation", bytes, false);
+    //test_write_bytes_backward("write bytes backward preallocated", bytes, true);
+    //test_write_bytes_backward("write bytes backward with allocation", bytes, false);
+    //test_fread(file_name, "fread preallocated", bytes, true);
+    //test_fread(file_name, "fread with allocation", bytes, false);
+    //test_read(file_name, "_read preallocated", bytes, true);
+    //test_read(file_name, "_read with allocation", bytes, false);
+    //test_read_file(file_name, "ReadFile preallocated", bytes, true);
+    //test_read_file(file_name, "ReadFile with allocation", bytes, false);
     return 0;
 }
