@@ -331,8 +331,8 @@ s32 main(int arg_count, char** args)
     bytes.buffer = (u8*)malloc(bytes.size);
     fclose(file);
 
-    //test_write_page_faults();
-    test_backwards_write_page_faults();
+    test_write_page_faults();
+    //test_backwards_write_page_faults();
     //test_write_bytes("write bytes preallocated", bytes, true);
     //test_write_bytes("write bytes with allocation", bytes, false);
     //test_write_bytes_backward("write bytes backward preallocated", bytes, true);
