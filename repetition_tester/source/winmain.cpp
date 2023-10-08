@@ -35,6 +35,41 @@ static u64 min_elapsed = (u64)-1;
 static u64 max_page_faults = 0;
 static u64 min_page_faults = 0;
 
+struct DecomposedVirtualAddress
+{
+    u16 pml4_index = 0;
+    u16 directory_ptr_index = 0;
+    u16 directory_index = 0;
+    u16 table_index = 0;
+    u32 offset = 0;
+};
+
+static void print_dva(DecomposedVirtualAddress address)
+{
+    printf("|%3u|%3u|%3u|%3u|%10u|", address.pml4_index, address.directory_ptr_index, address.directory_index, address.table_index, address.offset);
+}
+
+static void print_dva_as_line(char const* label, DecomposedVirtualAddress address)
+{
+    printf("%s", label);
+    print_dva(address);
+    printf("\n");
+}
+
+static DecomposedVirtualAddress decompose_pointer_4k(void* ptr)
+{
+    DecomposedVirtualAddress result = {};
+    
+    u64 address = (u64)ptr;
+    result.pml4_index = ((address >> 39) & 0x1ff);
+    result.directory_ptr_index = ((address >> 30) & 0x1ff);
+    result.directory_index = ((address >> 21) & 0x1ff);
+    result.table_index = ((address >> 12) & 0x1ff);
+    result.offset = ((address >> 0) & 0xfff);
+    
+    return result;
+}
+
 void init(const char* label, u64 target)
 {
     printf("--- %s ---\n", label);
@@ -149,7 +184,10 @@ void test_write_page_faults()
         }
         u64 faults = read_os_page_fault_count() - faults_start;
 
-        printf("%llu, %llu, %llu, %lld\n", page_count, i, faults, faults - i);
+        printf("%3llu, %3llu, %3llu, %3lld,", page_count, i, faults, faults - i);
+        void* end_ptr = data+touch_size-1;
+        print_dva(decompose_pointer_4k(end_ptr));
+        printf("\n");
         VirtualFree(data, 0, MEM_RELEASE);
     }
 }
