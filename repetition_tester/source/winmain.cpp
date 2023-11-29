@@ -272,7 +272,6 @@ static void test_NOPAllBytes(const char* label, Bytes preallocated_bytes, bool u
         if (!use_preallocated) {
             buffer = (u8*)malloc(preallocated_bytes.size);
         }
-        u8* out = buffer;
 
         begin();
         NOPAllBytesASM(preallocated_bytes.size);
@@ -294,7 +293,6 @@ static void test_CMPAllBytes(const char* label, Bytes preallocated_bytes, bool u
         if (!use_preallocated) {
             buffer = (u8*)malloc(preallocated_bytes.size);
         }
-        u8* out = buffer;
 
         begin();
         CMPAllBytesASM(preallocated_bytes.size);
@@ -316,7 +314,6 @@ static void test_DECAllBytes(const char* label, Bytes preallocated_bytes, bool u
         if (!use_preallocated) {
             buffer = (u8*)malloc(preallocated_bytes.size);
         }
-        u8* out = buffer;
 
         begin();
         DECAllBytesASM(preallocated_bytes.size);
