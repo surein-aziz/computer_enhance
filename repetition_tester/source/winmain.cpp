@@ -369,7 +369,10 @@ s32 main(int arg_count, char** args)
     bytes.buffer = (u8*)malloc(bytes.size);
     fclose(file);
 
-    test_write_page_faults();
+    //u64 local_cpu_freq = guess_cpu_freq(100);
+    //printf("%llu\n", local_cpu_freq);
+
+    //test_write_page_faults();
     //test_backwards_write_page_faults();
     //test_write_bytes("write bytes preallocated", bytes, true);
     //test_write_bytes("write bytes with allocation", bytes, false);
