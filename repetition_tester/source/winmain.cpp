@@ -8,6 +8,12 @@
 // Single compilation unit
 #include "../../common/platform_metrics.cpp"
 
+extern "C" void MOVAllBytesASM(u64 count, u8* data);
+extern "C" void NOPAllBytesASM(u64 count);
+extern "C" void CMPAllBytesASM(u64 count);
+extern "C" void DECAllBytesASM(u64 count);
+#pragma comment (lib, "listing_0132_nop_loop")
+
 struct Bytes {
     u8* buffer = 0; // malloced buffer
     s32 size = 0;
@@ -212,7 +218,7 @@ void test_backwards_write_page_faults()
     }
 }
 
-void test_write_bytes(const char* label, Bytes preallocated_bytes, bool use_preallocated)
+static void test_write_bytes(const char* label, Bytes preallocated_bytes, bool use_preallocated)
 {
     init(label, preallocated_bytes.size);
     do {
@@ -226,6 +232,94 @@ void test_write_bytes(const char* label, Bytes preallocated_bytes, bool use_prea
         for (u64 i = 0; i < preallocated_bytes.size; ++i) {
             out[i] = (u8)i;
         }
+        end();
+        
+        count(preallocated_bytes.size);
+
+        if (!use_preallocated) {
+            free(buffer);
+        }
+    } while (testing());
+}
+
+static void test_MOVAllBytes(const char* label, Bytes preallocated_bytes, bool use_preallocated)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        if (!use_preallocated) {
+            buffer = (u8*)malloc(preallocated_bytes.size);
+        }
+        u8* out = buffer;
+
+        begin();
+        MOVAllBytesASM(preallocated_bytes.size, out);
+        end();
+        
+        count(preallocated_bytes.size);
+
+        if (!use_preallocated) {
+            free(buffer);
+        }
+    } while (testing());
+}
+
+static void test_NOPAllBytes(const char* label, Bytes preallocated_bytes, bool use_preallocated)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        if (!use_preallocated) {
+            buffer = (u8*)malloc(preallocated_bytes.size);
+        }
+        u8* out = buffer;
+
+        begin();
+        NOPAllBytesASM(preallocated_bytes.size);
+        end();
+        
+        count(preallocated_bytes.size);
+
+        if (!use_preallocated) {
+            free(buffer);
+        }
+    } while (testing());
+}
+
+static void test_CMPAllBytes(const char* label, Bytes preallocated_bytes, bool use_preallocated)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        if (!use_preallocated) {
+            buffer = (u8*)malloc(preallocated_bytes.size);
+        }
+        u8* out = buffer;
+
+        begin();
+        CMPAllBytesASM(preallocated_bytes.size);
+        end();
+        
+        count(preallocated_bytes.size);
+
+        if (!use_preallocated) {
+            free(buffer);
+        }
+    } while (testing());
+}
+
+static void test_DECAllBytes(const char* label, Bytes preallocated_bytes, bool use_preallocated)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        if (!use_preallocated) {
+            buffer = (u8*)malloc(preallocated_bytes.size);
+        }
+        u8* out = buffer;
+
+        begin();
+        DECAllBytesASM(preallocated_bytes.size);
         end();
         
         count(preallocated_bytes.size);
@@ -369,8 +463,11 @@ s32 main(int arg_count, char** args)
     bytes.buffer = (u8*)malloc(bytes.size);
     fclose(file);
 
-    //u64 local_cpu_freq = guess_cpu_freq(100);
-    //printf("%llu\n", local_cpu_freq);
+    test_write_bytes("write bytes (preallocated)", bytes, true);
+    test_MOVAllBytes("write bytes via ASM (preallocated)", bytes, true);
+    test_NOPAllBytes("empty loop of same size via ASM (mov -> nop, memory not touched)", bytes, true);
+    test_CMPAllBytes("empty loop of same size via ASM (remove mov, memory not touched)", bytes, true);
+    test_DECAllBytes("raw dec of same size via ASM", bytes, true);
 
     //test_write_page_faults();
     //test_backwards_write_page_faults();
