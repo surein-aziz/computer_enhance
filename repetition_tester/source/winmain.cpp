@@ -19,6 +19,9 @@ extern "C" void NOP1x3AllBytes(u64 count);
 extern "C" void NOP1x9AllBytes(u64 count);
 #pragma comment (lib, "listing_0134_multinop_loops")
 
+extern "C" void ConditionalNOP(u64 count, u8* data);
+#pragma comment (lib, "listing_0136_conditional_nop_loops")
+
 struct Bytes {
     u8* buffer = 0; // malloced buffer
     s32 size = 0;
@@ -259,6 +262,28 @@ static void test_MOVAllBytes(const char* label, Bytes preallocated_bytes, bool u
 
         begin();
         MOVAllBytesASM(preallocated_bytes.size, out);
+        end();
+        
+        count(preallocated_bytes.size);
+
+        if (!use_preallocated) {
+            free(buffer);
+        }
+    } while (testing());
+}
+
+static void test_ConditionalNOP(const char* label, Bytes preallocated_bytes, bool use_preallocated)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        if (!use_preallocated) {
+            buffer = (u8*)malloc(preallocated_bytes.size);
+        }
+        u8* out = buffer;
+
+        begin();
+        ConditionalNOP(preallocated_bytes.size, out);
         end();
         
         count(preallocated_bytes.size);
@@ -530,10 +555,40 @@ s32 main(int arg_count, char** args)
 
     test_write_bytes("write bytes (preallocated)", bytes, true);
     test_MOVAllBytes("write bytes via ASM (preallocated)", bytes, true);
-    test_NOP3x1AllBytes("empty loop of same size via ASM (mov -> 3 byte nop, memory not touched)", bytes, true);
-    test_NOP1x3AllBytes("empty loop of same size via ASM (mov -> 3 1 byte nops, memory not touched)", bytes, true);
-    test_NOP1x9AllBytes("empty loop of same size via ASM (mov -> 9 1 byte nops, memory not touched)", bytes, true);
+    for (u64 i = 0; i < bytes.size; ++i) {
+        bytes.buffer[i] = 0;
+    }
+    test_ConditionalNOP("write bytes via ASM, branch predict no jumps", bytes, true);
+    for (u64 i = 0; i < bytes.size; ++i) {
+        bytes.buffer[i] = 1;
+    }
+    test_ConditionalNOP("write bytes via ASM, branch predict all jumps", bytes, true);
+    for (u64 i = 0; i < bytes.size/2; ++i) {
+        bytes.buffer[i] = 0;
+        bytes.buffer[i+1] = 1;
+    }
+    test_ConditionalNOP("write bytes via ASM, branch predict jump every other", bytes, true);
+    for (u64 i = 0; i < bytes.size/3; ++i) {
+        bytes.buffer[i] = 0;
+        bytes.buffer[i+1] = 0;
+        bytes.buffer[i+2] = 1;
+    }
+    test_ConditionalNOP("write bytes via ASM, branch predict jump every 3rd", bytes, true);
+    for (u64 i = 0; i < bytes.size/4; ++i) {
+        bytes.buffer[i] = 0;
+        bytes.buffer[i+1] = 0;
+        bytes.buffer[i+2] = 0;
+        bytes.buffer[i+3] = 1;
+    }
+    test_ConditionalNOP("write bytes via ASM, branch predict jump every 4th", bytes, true);
+    for (u64 i = 0; i < bytes.size; ++i) {
+        bytes.buffer[i] = rand();
+    }
+    test_ConditionalNOP("write bytes via ASM, branch predict jump rand()", bytes, true);
 
+    //test_NOP3x1AllBytes("empty loop of same size via ASM (mov -> 3 byte nop, memory not touched)", bytes, true);
+    //test_NOP1x3AllBytes("empty loop of same size via ASM (mov -> 3 1 byte nops, memory not touched)", bytes, true);
+    //test_NOP1x9AllBytes("empty loop of same size via ASM (mov -> 9 1 byte nops, memory not touched)", bytes, true);
     //test_write_page_faults();
     //test_backwards_write_page_faults();
     //test_write_bytes("write bytes preallocated", bytes, true);
