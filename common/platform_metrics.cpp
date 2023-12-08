@@ -1,6 +1,13 @@
 #include <intrin.h>
 #include <psapi.h>
 
+#pragma comment (lib, "bcrypt.lib")
+
+struct Bytes {
+    u8* buffer = 0; // malloced buffer
+    s32 size = 0;
+};
+
 struct WindowsMetrics
 {
 	bool initialized = false;
@@ -71,4 +78,37 @@ inline u64 guess_cpu_freq(u64 milliseconds)
 	u64 cpu_elapsed = cpu_end - cpu_start;
 	Assert(os_elapsed > 0);
 	return os_freq * cpu_elapsed / os_elapsed;
+}
+
+static u64 get_max_os_random_count()
+{
+    return 0xffffffff;
+}
+
+static b32 read_os_random_bytes(u64 count, void* dest)
+{
+    b32 res = false;
+    if(count < get_max_os_random_count())
+    {
+        res = (BCryptGenRandom(0, (BYTE *)dest, (u32)count, BCRYPT_USE_SYSTEM_PREFERRED_RNG) != 0);
+    }
+    
+    return res;
+}
+
+inline void fill_with_random_bytes(Bytes bytes)
+{
+    u64 max_rand_count = get_max_os_random_count();
+    u64 at_offset = 0;
+    while(at_offset < bytes.size)
+    {
+        u64 read_count = bytes.size - at_offset;
+        if(read_count > max_rand_count)
+        {
+            read_count = max_rand_count;
+        }
+        
+        read_os_random_bytes(read_count, bytes.buffer + at_offset);
+        at_offset += read_count;
+    }
 }

@@ -1,7 +1,3 @@
-struct Bytes {
-    u8* buffer = 0; // malloced buffer
-    s32 size = 0;
-};
 
 struct HaversineData {
     f64* x0 = 0;
