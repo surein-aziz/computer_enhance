@@ -32,6 +32,12 @@ extern "C" void Read_1x2(u64 count, u8* data);
 extern "C" void Read_8x2(u64 count, u8* data);
 #pragma comment (lib, "listing_0146_byte_read")
 
+extern "C" void Write_x1(u64 count, u8* data);
+extern "C" void Write_x2(u64 count, u8* data);
+extern "C" void Write_x3(u64 count, u8* data);
+extern "C" void Write_x4(u64 count, u8* data);
+#pragma comment (lib, "write_ports")
+
 static const f64 wait_ms = 10000;
 
 static u64 cpu_freq = 0;
@@ -362,6 +368,63 @@ static void test_Read_8x2(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
+static void test_Write_x1(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+
+        begin();
+        Write_x1(preallocated_bytes.size, buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void test_Write_x2(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+
+        begin();
+        Write_x2(preallocated_bytes.size, buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void test_Write_x3(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+
+        begin();
+        Write_x3(preallocated_bytes.size, buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+
+static void test_Write_x4(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+
+        begin();
+        Write_x4(preallocated_bytes.size, buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
 static void test_ConditionalNOP(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
@@ -634,6 +697,11 @@ s32 main(int arg_count, char** args)
     bytes.size = ftell(file);
     bytes.buffer = (u8*)malloc(bytes.size);
     fclose(file);
+
+    test_Write_x1("Write once per loop", bytes);
+    test_Write_x2("Write twice per loop", bytes);
+    test_Write_x3("Write three times per loop", bytes);
+    test_Write_x4("Write four times per loop", bytes);
 
     test_Read_x1("Read once per loop", bytes);
     test_Read_x2("Read twice per loop", bytes);
