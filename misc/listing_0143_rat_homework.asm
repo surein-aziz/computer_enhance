@@ -16,20 +16,20 @@
 
 ;
 ;  NOTE(casey): Regular Homework
-;                       dest    source
+;                       dest    source0 source1
     mov rax, 1          r0               
     mov rbx, 2          r1
     mov rcx, 3          r2
     mov rdx, 4          r3
-    add rax, rbx        r4      r1
-    add rcx, rdx        r5      r3
-    add rax, rcx        r6      r5
+    add rax, rbx        r4      r1      r0
+    add rcx, rdx        r5      r3      r2
+    add rax, rcx        r6      r5      r4
     mov rcx, rbx        r7      r1
     inc rax             r8      r6
     dec rcx             r9      r7
-    sub rax, rbx        r10     r1
-    sub rcx, rdx        r11     r3
-    sub rax, rcx        r12     r11
+    sub rax, rbx        r10     r1      r8
+    sub rcx, rdx        r11     r3      r9
+    sub rax, rcx        r12     r11     r10
 
 ;
 ;  NOTE(casey): CHALLENGE MODE WITH ULTIMATE DIFFICULTY SETTINGS
