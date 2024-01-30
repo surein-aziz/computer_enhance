@@ -22,6 +22,16 @@ extern "C" void NOP1x9AllBytes(u64 count);
 extern "C" void ConditionalNOP(u64 count, u8* data);
 #pragma comment (lib, "listing_0136_conditional_nop_loops")
 
+extern "C" void Read_x1(u64 count, u8* data);
+extern "C" void Read_x2(u64 count, u8* data);
+extern "C" void Read_x3(u64 count, u8* data);
+extern "C" void Read_x4(u64 count, u8* data);
+#pragma comment (lib, "listing_0144_read_unroll")
+
+extern "C" void Read_1x2(u64 count, u8* data);
+extern "C" void Read_8x2(u64 count, u8* data);
+#pragma comment (lib, "listing_0146_byte_read")
+
 static const f64 wait_ms = 10000;
 
 static u64 cpu_freq = 0;
@@ -264,6 +274,91 @@ static void test_MOVAllBytes(const char* label, Bytes preallocated_bytes, bool u
         if (!use_preallocated) {
             free(buffer);
         }
+    } while (testing());
+}
+
+static void test_Read_x1(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+
+        begin();
+        Read_x1(preallocated_bytes.size, buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void test_Read_x2(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+
+        begin();
+        Read_x2(preallocated_bytes.size, buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void test_Read_x3(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+
+        begin();
+        Read_x3(preallocated_bytes.size, buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+
+static void test_Read_x4(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+
+        begin();
+        Read_x4(preallocated_bytes.size, buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void test_Read_1x2(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+
+        begin();
+        Read_1x2(preallocated_bytes.size, buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void test_Read_8x2(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+
+        begin();
+        Read_8x2(preallocated_bytes.size, buffer);
+        end();
+        
+        count(preallocated_bytes.size);
     } while (testing());
 }
 
@@ -540,6 +635,15 @@ s32 main(int arg_count, char** args)
     bytes.buffer = (u8*)malloc(bytes.size);
     fclose(file);
 
+    test_Read_x1("Read once per loop", bytes);
+    test_Read_x2("Read twice per loop", bytes);
+    test_Read_x3("Read three times per loop", bytes);
+    test_Read_x4("Read four times per loop", bytes);
+
+    test_Read_1x2("Read one-byte width twice per loop", bytes);
+    test_Read_8x2("Read full width twice per loop", bytes);
+
+    /*
     test_write_bytes("write bytes (preallocated)", bytes, true);
     test_MOVAllBytes("write bytes via ASM (preallocated)", bytes, true);
     for (u64 i = 0; i < bytes.size; ++i) {
@@ -575,21 +679,21 @@ s32 main(int arg_count, char** args)
     fill_with_random_bytes(bytes);
     test_ConditionalNOP("write bytes via ASM, branch predict jump bcrypt rand", bytes);
 
-
-    //test_NOP3x1AllBytes("empty loop of same size via ASM (mov -> 3 byte nop, memory not touched)", bytes, true);
-    //test_NOP1x3AllBytes("empty loop of same size via ASM (mov -> 3 1 byte nops, memory not touched)", bytes, true);
-    //test_NOP1x9AllBytes("empty loop of same size via ASM (mov -> 9 1 byte nops, memory not touched)", bytes, true);
-    //test_write_page_faults();
-    //test_backwards_write_page_faults();
-    //test_write_bytes("write bytes preallocated", bytes, true);
-    //test_write_bytes("write bytes with allocation", bytes, false);
-    //test_write_bytes_backward("write bytes backward preallocated", bytes, true);
-    //test_write_bytes_backward("write bytes backward with allocation", bytes, false);
-    //test_fread(file_name, "fread preallocated", bytes, true);
-    //test_fread(file_name, "fread with allocation", bytes, false);
-    //test_read(file_name, "_read preallocated", bytes, true);
-    //test_read(file_name, "_read with allocation", bytes, false);
-    //test_read_file(file_name, "ReadFile preallocated", bytes, true);
-    //test_read_file(file_name, "ReadFile with allocation", bytes, false);
+    test_NOP3x1AllBytes("empty loop of same size via ASM (mov -> 3 byte nop, memory not touched)", bytes, true);
+    test_NOP1x3AllBytes("empty loop of same size via ASM (mov -> 3 1 byte nops, memory not touched)", bytes, true);
+    test_NOP1x9AllBytes("empty loop of same size via ASM (mov -> 9 1 byte nops, memory not touched)", bytes, true);
+    test_write_page_faults();
+    test_backwards_write_page_faults();
+    test_write_bytes("write bytes preallocated", bytes, true);
+    test_write_bytes("write bytes with allocation", bytes, false);
+    test_write_bytes_backward("write bytes backward preallocated", bytes, true);
+    test_write_bytes_backward("write bytes backward with allocation", bytes, false);
+    test_fread(file_name, "fread preallocated", bytes, true);
+    test_fread(file_name, "fread with allocation", bytes, false);
+    test_read(file_name, "_read preallocated", bytes, true);
+    test_read(file_name, "_read with allocation", bytes, false);
+    test_read_file(file_name, "ReadFile preallocated", bytes, true);
+    test_read_file(file_name, "ReadFile with allocation", bytes, false);
+    */
     return 0;
 }
