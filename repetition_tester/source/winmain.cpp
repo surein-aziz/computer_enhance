@@ -28,15 +28,17 @@ extern "C" void Read_x3(u64 count, u8* data);
 extern "C" void Read_x4(u64 count, u8* data);
 #pragma comment (lib, "listing_0144_read_unroll")
 
-extern "C" void Read_1x2(u64 count, u8* data);
-extern "C" void Read_8x2(u64 count, u8* data);
-#pragma comment (lib, "listing_0146_byte_read")
-
 extern "C" void Write_x1(u64 count, u8* data);
 extern "C" void Write_x2(u64 count, u8* data);
 extern "C" void Write_x3(u64 count, u8* data);
 extern "C" void Write_x4(u64 count, u8* data);
 #pragma comment (lib, "write_ports")
+
+extern "C" void Read_4x2(u64 count, u8* data);
+extern "C" void Read_8x2(u64 count, u8* data);
+extern "C" void Read_16x2(u64 count, u8* data);
+extern "C" void Read_32x2(u64 count, u8* data);
+#pragma comment (lib, "listing_0150_read_widths")
 
 static const f64 wait_ms = 10000;
 
@@ -340,14 +342,14 @@ static void test_Read_x4(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
-static void test_Read_1x2(const char* label, Bytes preallocated_bytes)
+static void test_Read_4x2(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
     do {
         u8* buffer = preallocated_bytes.buffer;
 
         begin();
-        Read_1x2(preallocated_bytes.size, buffer);
+        Read_4x2(preallocated_bytes.size, buffer);
         end();
         
         count(preallocated_bytes.size);
@@ -362,6 +364,35 @@ static void test_Read_8x2(const char* label, Bytes preallocated_bytes)
 
         begin();
         Read_8x2(preallocated_bytes.size, buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void test_Read_16x2(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+
+        begin();
+        Read_16x2(preallocated_bytes.size, buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+
+static void test_Read_32x2(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+
+        begin();
+        Read_32x2(preallocated_bytes.size, buffer);
         end();
         
         count(preallocated_bytes.size);
@@ -698,18 +729,20 @@ s32 main(int arg_count, char** args)
     bytes.buffer = (u8*)malloc(bytes.size);
     fclose(file);
 
-    test_Write_x1("Write once per loop", bytes);
-    test_Write_x2("Write twice per loop", bytes);
-    test_Write_x3("Write three times per loop", bytes);
-    test_Write_x4("Write four times per loop", bytes);
+    test_Read_4x2("4-byte read twice per loop", bytes);
+    test_Read_8x2("8-byte read twice per loop", bytes);
+    test_Read_16x2("16-byte read twice per loop", bytes);
+    test_Read_32x2("32-byte read twice per loop", bytes);
 
-    test_Read_x1("Read once per loop", bytes);
-    test_Read_x2("Read twice per loop", bytes);
-    test_Read_x3("Read three times per loop", bytes);
-    test_Read_x4("Read four times per loop", bytes);
+    //test_Write_x1("Write once per loop", bytes);
+    //test_Write_x2("Write twice per loop", bytes);
+    //test_Write_x3("Write three times per loop", bytes);
+    //test_Write_x4("Write four times per loop", bytes);
 
-    test_Read_1x2("Read one-byte width twice per loop", bytes);
-    test_Read_8x2("Read full width twice per loop", bytes);
+    //test_Read_x1("Read once per loop", bytes);
+    //test_Read_x2("Read twice per loop", bytes);
+    //test_Read_x3("Read three times per loop", bytes);
+    //test_Read_x4("Read four times per loop", bytes);
 
     /*
     test_write_bytes("write bytes (preallocated)", bytes, true);
