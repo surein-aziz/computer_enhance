@@ -48,6 +48,19 @@ extern "C" void Read_32x3(u64 count, u8* data);
 extern "C" void Read_32x4(u64 count, u8* data);
 #pragma comment (lib, "listing_0150_read_widths")
 
+extern "C" void Read_1024mb(u8* data);
+extern "C" void Read_256mb(u8* data);
+extern "C" void Read_64mb(u8* data);
+extern "C" void Read_16mb(u8* data);
+extern "C" void Read_4mb(u8* data);
+extern "C" void Read_1024kb(u8* data);
+extern "C" void Read_256kb(u8* data);
+extern "C" void Read_64kb(u8* data);
+extern "C" void Read_16kb(u8* data);
+extern "C" void Read_4kb(u8* data);
+extern "C" void Read_1kb(u8* data);
+#pragma comment (lib, "cache_test")
+
 static const f64 wait_ms = 10000;
 
 static u64 cpu_freq = 0;
@@ -575,6 +588,172 @@ static void test_Write_x4(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
+static void Read_1024mb(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        Assert(preallocated_bytes.size > 0x3FFFFFFF);
+
+        begin();
+        Read_1024mb(buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+
+static void Read_256mb(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        Assert(preallocated_bytes.size > 0x3FFFFFFF);
+
+        begin();
+        Read_256mb(buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void Read_64mb(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        Assert(preallocated_bytes.size > 0x3FFFFFFF);
+
+        begin();
+        Read_64mb(buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void Read_16mb(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        Assert(preallocated_bytes.size > 0x3FFFFFFF);
+
+        begin();
+        Read_16mb(buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void Read_4mb(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        Assert(preallocated_bytes.size > 0x3FFFFFFF);
+
+        begin();
+        Read_4mb(buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void Read_1024kb(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        Assert(preallocated_bytes.size > 0x3FFFFFFF);
+
+        begin();
+        Read_1024kb(buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void Read_256kb(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        Assert(preallocated_bytes.size > 0x3FFFFFFF);
+
+        begin();
+        Read_256kb(buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void Read_64kb(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        Assert(preallocated_bytes.size > 0x3FFFFFFF);
+
+        begin();
+        Read_64kb(buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void Read_16kb(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        Assert(preallocated_bytes.size > 0x3FFFFFFF);
+
+        begin();
+        Read_16kb(buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void Read_4kb(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        Assert(preallocated_bytes.size > 0x3FFFFFFF);
+
+        begin();
+        Read_4kb(buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
+static void Read_1kb(const char* label, Bytes preallocated_bytes)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        Assert(preallocated_bytes.size > 0x3FFFFFFF);
+
+        begin();
+        Read_1kb(buffer);
+        end();
+        
+        count(preallocated_bytes.size);
+    } while (testing());
+}
+
 static void test_ConditionalNOP(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
@@ -848,18 +1027,20 @@ s32 main(int arg_count, char** args)
     bytes.buffer = (u8*)malloc(bytes.size);
     fclose(file);
 
-    test_Read_4x2("4-byte read 2 times per loop", bytes);
-    test_Read_4x3("4-byte read 3 times per loop", bytes);
-    test_Read_4x4("4-byte read 4 times per loop", bytes);
-    test_Read_8x2("8-byte read 2 times per loop", bytes);
-    test_Read_8x3("8-byte read 3 times per loop", bytes);
-    test_Read_8x4("8-byte read 4 times per loop", bytes);
-    test_Read_16x2("16-byte read 2 times per loop", bytes);
-    test_Read_16x3("16-byte read 3 times per loop", bytes);
-    test_Read_16x4("16-byte read 4 times per loop", bytes);
-    test_Read_32x2("32-byte read 2 times per loop", bytes);
-    test_Read_32x3("32-byte read 3 times per loop", bytes);
-    test_Read_32x4("32-byte read 4 times per loop", bytes);
+
+
+    //test_Read_4x2("4-byte read 2 times per loop", bytes);
+    //test_Read_4x3("4-byte read 3 times per loop", bytes);
+    //test_Read_4x4("4-byte read 4 times per loop", bytes);
+    //test_Read_8x2("8-byte read 2 times per loop", bytes);
+    //test_Read_8x3("8-byte read 3 times per loop", bytes);
+    //test_Read_8x4("8-byte read 4 times per loop", bytes);
+    //test_Read_16x2("16-byte read 2 times per loop", bytes);
+    //test_Read_16x3("16-byte read 3 times per loop", bytes);
+    //test_Read_16x4("16-byte read 4 times per loop", bytes);
+    //test_Read_32x2("32-byte read 2 times per loop", bytes);
+    //test_Read_32x3("32-byte read 3 times per loop", bytes);
+    //test_Read_32x4("32-byte read 4 times per loop", bytes);
 
     //test_Write_x1("Write once per loop", bytes);
     //test_Write_x2("Write twice per loop", bytes);
