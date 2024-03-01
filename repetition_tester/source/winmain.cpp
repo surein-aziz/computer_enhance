@@ -588,7 +588,7 @@ static void test_Write_x4(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
-static void Read_1024mb(const char* label, Bytes preallocated_bytes)
+static void test_Read_1024mb(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
     do {
@@ -604,7 +604,7 @@ static void Read_1024mb(const char* label, Bytes preallocated_bytes)
 }
 
 
-static void Read_256mb(const char* label, Bytes preallocated_bytes)
+static void test_Read_256mb(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
     do {
@@ -619,7 +619,7 @@ static void Read_256mb(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
-static void Read_64mb(const char* label, Bytes preallocated_bytes)
+static void test_Read_64mb(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
     do {
@@ -634,7 +634,7 @@ static void Read_64mb(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
-static void Read_16mb(const char* label, Bytes preallocated_bytes)
+static void test_Read_16mb(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
     do {
@@ -649,7 +649,7 @@ static void Read_16mb(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
-static void Read_4mb(const char* label, Bytes preallocated_bytes)
+static void test_Read_4mb(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
     do {
@@ -664,7 +664,7 @@ static void Read_4mb(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
-static void Read_1024kb(const char* label, Bytes preallocated_bytes)
+static void test_Read_1024kb(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
     do {
@@ -679,7 +679,7 @@ static void Read_1024kb(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
-static void Read_256kb(const char* label, Bytes preallocated_bytes)
+static void test_Read_256kb(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
     do {
@@ -694,7 +694,7 @@ static void Read_256kb(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
-static void Read_64kb(const char* label, Bytes preallocated_bytes)
+static void test_Read_64kb(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
     do {
@@ -709,7 +709,7 @@ static void Read_64kb(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
-static void Read_16kb(const char* label, Bytes preallocated_bytes)
+static void test_Read_16kb(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
     do {
@@ -724,7 +724,7 @@ static void Read_16kb(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
-static void Read_4kb(const char* label, Bytes preallocated_bytes)
+static void test_Read_4kb(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
     do {
@@ -739,7 +739,7 @@ static void Read_4kb(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
-static void Read_1kb(const char* label, Bytes preallocated_bytes)
+static void test_Read_1kb(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
     do {
@@ -1019,15 +1019,29 @@ s32 main(int arg_count, char** args)
 {
     initialize_metrics();
 
-    const char* file_name = "../data/data_10000000.json";
     Bytes bytes;
-    FILE* file = fopen(file_name, "rb");
-    fseek(file, 0, SEEK_END);
-    bytes.size = ftell(file);
+    bytes.size = 0x3FFFFFFF + 5;
     bytes.buffer = (u8*)malloc(bytes.size);
-    fclose(file);
 
+    test_Read_1024mb("1024mb read", bytes);
+    test_Read_256mb("256mb read", bytes);
+    test_Read_64mb("64mb read", bytes);
+    test_Read_16mb("16mb read", bytes);
+    test_Read_4mb("4mb read", bytes);
+    test_Read_1024kb("1024kb read", bytes);
+    test_Read_256kb("256kb read", bytes);
+    test_Read_64kb("64kb read", bytes);
+    test_Read_16kb("16kb read", bytes);
+    test_Read_4kb("4kb read", bytes);
+    test_Read_1kb("1kb read", bytes);
 
+    //const char* file_name = "../data/data_10000000.json";
+    //Bytes bytes;
+    //FILE* file = fopen(file_name, "rb");
+    //fseek(file, 0, SEEK_END);
+    //bytes.size = ftell(file);
+    //bytes.buffer = (u8*)malloc(bytes.size);
+    //fclose(file);
 
     //test_Read_4x2("4-byte read 2 times per loop", bytes);
     //test_Read_4x3("4-byte read 3 times per loop", bytes);
