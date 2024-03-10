@@ -61,6 +61,9 @@ extern "C" void Read_4kb(u8* data);
 extern "C" void Read_1kb(u8* data);
 #pragma comment (lib, "cache_test")
 
+extern "C" void Read_Granular(u64 kbs, u8* data, u64 reps);
+#pragma comment (lib, "granular_cache_test")
+
 static const f64 wait_ms = 10000;
 
 static u64 cpu_freq = 0;
@@ -588,6 +591,22 @@ static void test_Write_x4(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
+static void test_Read_Granular(const char* label, Bytes preallocated_bytes, u64 kbs)
+{
+    init(label, preallocated_bytes.size);
+    do {
+        u8* buffer = preallocated_bytes.buffer;
+        Assert(preallocated_bytes.size > 0x3FFFFFFF);
+        u64 reps = 0x3FFFFFFF / (kbs*1024);
+
+        begin();
+        Read_Granular(kbs, buffer, reps);
+        end();
+        
+        count(kbs * 1024 * reps);
+    } while (testing());
+}
+
 static void test_Read_1024mb(const char* label, Bytes preallocated_bytes)
 {
     init(label, preallocated_bytes.size);
@@ -1023,6 +1042,18 @@ s32 main(int arg_count, char** args)
     bytes.size = 0x3FFFFFFF + 5;
     bytes.buffer = (u8*)malloc(bytes.size);
 
+    test_Read_Granular("1024mb read", bytes, 1024*1024);
+    test_Read_Granular("256mb read", bytes, 256*1024);
+    test_Read_Granular("64mb read", bytes, 64*1024);
+    test_Read_Granular("16mb read", bytes, 16*1024);
+    test_Read_Granular("4mb read", bytes, 4*1024);
+    test_Read_Granular("1024kb read", bytes, 1024);
+    test_Read_Granular("256kb read", bytes, 256);
+    test_Read_Granular("64kb read", bytes, 64);
+    test_Read_Granular("16kb read", bytes, 16);
+    test_Read_Granular("4kb read", bytes, 4);
+    test_Read_Granular("1kb read", bytes, 1);
+
     test_Read_1024mb("1024mb read", bytes);
     test_Read_256mb("256mb read", bytes);
     test_Read_64mb("64mb read", bytes);
@@ -1035,38 +1066,39 @@ s32 main(int arg_count, char** args)
     test_Read_4kb("4kb read", bytes);
     test_Read_1kb("1kb read", bytes);
 
-    //const char* file_name = "../data/data_10000000.json";
-    //Bytes bytes;
-    //FILE* file = fopen(file_name, "rb");
-    //fseek(file, 0, SEEK_END);
-    //bytes.size = ftell(file);
-    //bytes.buffer = (u8*)malloc(bytes.size);
-    //fclose(file);
-
-    //test_Read_4x2("4-byte read 2 times per loop", bytes);
-    //test_Read_4x3("4-byte read 3 times per loop", bytes);
-    //test_Read_4x4("4-byte read 4 times per loop", bytes);
-    //test_Read_8x2("8-byte read 2 times per loop", bytes);
-    //test_Read_8x3("8-byte read 3 times per loop", bytes);
-    //test_Read_8x4("8-byte read 4 times per loop", bytes);
-    //test_Read_16x2("16-byte read 2 times per loop", bytes);
-    //test_Read_16x3("16-byte read 3 times per loop", bytes);
-    //test_Read_16x4("16-byte read 4 times per loop", bytes);
-    //test_Read_32x2("32-byte read 2 times per loop", bytes);
-    //test_Read_32x3("32-byte read 3 times per loop", bytes);
-    //test_Read_32x4("32-byte read 4 times per loop", bytes);
-
-    //test_Write_x1("Write once per loop", bytes);
-    //test_Write_x2("Write twice per loop", bytes);
-    //test_Write_x3("Write three times per loop", bytes);
-    //test_Write_x4("Write four times per loop", bytes);
-
-    //test_Read_x1("Read once per loop", bytes);
-    //test_Read_x2("Read twice per loop", bytes);
-    //test_Read_x3("Read three times per loop", bytes);
-    //test_Read_x4("Read four times per loop", bytes);
-
     /*
+    const char* file_name = "../data/data_10000000.json";
+    Bytes bytes;
+    FILE* file = fopen(file_name, "rb");
+    fseek(file, 0, SEEK_END);
+    bytes.size = ftell(file);
+    bytes.buffer = (u8*)malloc(bytes.size);
+    fclose(file);
+
+    test_Read_4x2("4-byte read 2 times per loop", bytes);
+    test_Read_4x3("4-byte read 3 times per loop", bytes);
+    test_Read_4x4("4-byte read 4 times per loop", bytes);
+    test_Read_8x2("8-byte read 2 times per loop", bytes);
+    test_Read_8x3("8-byte read 3 times per loop", bytes);
+    test_Read_8x4("8-byte read 4 times per loop", bytes);
+    test_Read_16x2("16-byte read 2 times per loop", bytes);
+    test_Read_16x3("16-byte read 3 times per loop", bytes);
+    test_Read_16x4("16-byte read 4 times per loop", bytes);
+    test_Read_32x2("32-byte read 2 times per loop", bytes);
+    test_Read_32x3("32-byte read 3 times per loop", bytes);
+    test_Read_32x4("32-byte read 4 times per loop", bytes);
+
+    test_Write_x1("Write once per loop", bytes);
+    test_Write_x2("Write twice per loop", bytes);
+    test_Write_x3("Write three times per loop", bytes);
+    test_Write_x4("Write four times per loop", bytes);
+
+    test_Read_x1("Read once per loop", bytes);
+    test_Read_x2("Read twice per loop", bytes);
+    test_Read_x3("Read three times per loop", bytes);
+    test_Read_x4("Read four times per loop", bytes);
+
+
     test_write_bytes("write bytes (preallocated)", bytes, true);
     test_MOVAllBytes("write bytes via ASM (preallocated)", bytes, true);
     for (u64 i = 0; i < bytes.size; ++i) {
