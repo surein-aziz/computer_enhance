@@ -26,8 +26,14 @@ Read_1024mb:
     and rdx, 0x3FFFFFFF ; NOTE(surein): 1024mb mask
     add rdx, rcx
     vmovdqu ymm0, [rdx]
-    vmovdqu ymm1, [rdx + 32]
-    add rax, 64
+    vmovdqu ymm0, [rdx + 0x20]
+    vmovdqu ymm0, [rdx + 0x40]
+    vmovdqu ymm0, [rdx + 0x60]
+    vmovdqu ymm0, [rdx + 0x80]
+    vmovdqu ymm0, [rdx + 0xa0]
+    vmovdqu ymm0, [rdx + 0xc0]
+    vmovdqu ymm0, [rdx + 0xe0]
+    add rax, 0x100
     cmp rax, 0x3FFFFFFF
     jb .loop
     ret
@@ -41,8 +47,14 @@ Read_256mb:
     and rdx, 0xFFFFFFF ; NOTE(surein): 256mb mask
     add rdx, rcx
     vmovdqu ymm0, [rdx]
-    vmovdqu ymm1, [rdx + 32]
-    add rax, 64
+    vmovdqu ymm0, [rdx + 0x20]
+    vmovdqu ymm0, [rdx + 0x40]
+    vmovdqu ymm0, [rdx + 0x60]
+    vmovdqu ymm0, [rdx + 0x80]
+    vmovdqu ymm0, [rdx + 0xa0]
+    vmovdqu ymm0, [rdx + 0xc0]
+    vmovdqu ymm0, [rdx + 0xe0]
+    add rax, 0x100
     cmp rax, 0x3FFFFFFF
     jb .loop
     ret
@@ -56,8 +68,14 @@ Read_64mb:
     and rdx, 0x3FFFFFF ; NOTE(surein): 64mb mask
     add rdx, rcx
     vmovdqu ymm0, [rdx]
-    vmovdqu ymm1, [rdx + 32]
-    add rax, 64
+    vmovdqu ymm0, [rdx + 0x20]
+    vmovdqu ymm0, [rdx + 0x40]
+    vmovdqu ymm0, [rdx + 0x60]
+    vmovdqu ymm0, [rdx + 0x80]
+    vmovdqu ymm0, [rdx + 0xa0]
+    vmovdqu ymm0, [rdx + 0xc0]
+    vmovdqu ymm0, [rdx + 0xe0]
+    add rax, 0x100
     cmp rax, 0x3FFFFFFF
     jb .loop
     ret
@@ -71,8 +89,14 @@ Read_16mb:
     and rdx, 0xFFFFFF ; NOTE(surein): 16mb mask
     add rdx, rcx
     vmovdqu ymm0, [rdx]
-    vmovdqu ymm1, [rdx + 32]
-    add rax, 64
+    vmovdqu ymm0, [rdx + 0x20]
+    vmovdqu ymm0, [rdx + 0x40]
+    vmovdqu ymm0, [rdx + 0x60]
+    vmovdqu ymm0, [rdx + 0x80]
+    vmovdqu ymm0, [rdx + 0xa0]
+    vmovdqu ymm0, [rdx + 0xc0]
+    vmovdqu ymm0, [rdx + 0xe0]
+    add rax, 0x100
     cmp rax, 0x3FFFFFFF
     jb .loop
     ret
@@ -86,8 +110,14 @@ Read_4mb:
     and rdx, 0x3FFFFF ; NOTE(surein): 4mb mask
     add rdx, rcx
     vmovdqu ymm0, [rdx]
-    vmovdqu ymm1, [rdx + 32]
-    add rax, 64
+    vmovdqu ymm0, [rdx + 0x20]
+    vmovdqu ymm0, [rdx + 0x40]
+    vmovdqu ymm0, [rdx + 0x60]
+    vmovdqu ymm0, [rdx + 0x80]
+    vmovdqu ymm0, [rdx + 0xa0]
+    vmovdqu ymm0, [rdx + 0xc0]
+    vmovdqu ymm0, [rdx + 0xe0]
+    add rax, 0x100
     cmp rax, 0x3FFFFFFF
     jb .loop
     ret
@@ -101,8 +131,14 @@ Read_1024kb:
     and rdx, 0xFFFFF ; NOTE(surein): 1024kb mask
     add rdx, rcx
     vmovdqu ymm0, [rdx]
-    vmovdqu ymm1, [rdx + 32]
-    add rax, 64
+    vmovdqu ymm0, [rdx + 0x20]
+    vmovdqu ymm0, [rdx + 0x40]
+    vmovdqu ymm0, [rdx + 0x60]
+    vmovdqu ymm0, [rdx + 0x80]
+    vmovdqu ymm0, [rdx + 0xa0]
+    vmovdqu ymm0, [rdx + 0xc0]
+    vmovdqu ymm0, [rdx + 0xe0]
+    add rax, 0x100
     cmp rax, 0x3FFFFFFF
     jb .loop
     ret
@@ -116,8 +152,14 @@ Read_256kb:
     and rdx, 0x3FFFF ; NOTE(surein): 256kb mask
     add rdx, rcx
     vmovdqu ymm0, [rdx]
-    vmovdqu ymm1, [rdx + 32]
-    add rax, 64
+    vmovdqu ymm0, [rdx + 0x20]
+    vmovdqu ymm0, [rdx + 0x40]
+    vmovdqu ymm0, [rdx + 0x60]
+    vmovdqu ymm0, [rdx + 0x80]
+    vmovdqu ymm0, [rdx + 0xa0]
+    vmovdqu ymm0, [rdx + 0xc0]
+    vmovdqu ymm0, [rdx + 0xe0]
+    add rax, 0x100
     cmp rax, 0x3FFFFFFF
     jb .loop
     ret
@@ -131,8 +173,14 @@ Read_64kb:
     and rdx, 0xFFFF ; NOTE(surein): 64kb mask
     add rdx, rcx
     vmovdqu ymm0, [rdx]
-    vmovdqu ymm1, [rdx + 32]
-    add rax, 64
+    vmovdqu ymm0, [rdx + 0x20]
+    vmovdqu ymm0, [rdx + 0x40]
+    vmovdqu ymm0, [rdx + 0x60]
+    vmovdqu ymm0, [rdx + 0x80]
+    vmovdqu ymm0, [rdx + 0xa0]
+    vmovdqu ymm0, [rdx + 0xc0]
+    vmovdqu ymm0, [rdx + 0xe0]
+    add rax, 0x100
     cmp rax, 0x3FFFFFFF
     jb .loop
     ret
@@ -146,8 +194,14 @@ Read_16kb:
     and rdx, 0x3FFF ; NOTE(surein): 16kb mask
     add rdx, rcx
     vmovdqu ymm0, [rdx]
-    vmovdqu ymm1, [rdx + 32]
-    add rax, 64
+    vmovdqu ymm0, [rdx + 0x20]
+    vmovdqu ymm0, [rdx + 0x40]
+    vmovdqu ymm0, [rdx + 0x60]
+    vmovdqu ymm0, [rdx + 0x80]
+    vmovdqu ymm0, [rdx + 0xa0]
+    vmovdqu ymm0, [rdx + 0xc0]
+    vmovdqu ymm0, [rdx + 0xe0]
+    add rax, 0x100
     cmp rax, 0x3FFFFFFF
     jb .loop
     ret
@@ -161,8 +215,14 @@ Read_4kb:
     and rdx, 0xFFF ; NOTE(surein): 4kb mask
     add rdx, rcx
     vmovdqu ymm0, [rdx]
-    vmovdqu ymm1, [rdx + 32]
-    add rax, 64
+    vmovdqu ymm0, [rdx + 0x20]
+    vmovdqu ymm0, [rdx + 0x40]
+    vmovdqu ymm0, [rdx + 0x60]
+    vmovdqu ymm0, [rdx + 0x80]
+    vmovdqu ymm0, [rdx + 0xa0]
+    vmovdqu ymm0, [rdx + 0xc0]
+    vmovdqu ymm0, [rdx + 0xe0]
+    add rax, 0x100
     cmp rax, 0x3FFFFFFF
     jb .loop
     ret
@@ -176,8 +236,14 @@ Read_1kb:
     and rdx, 0x3FF ; NOTE(surein): 1kb mask
     add rdx, rcx
     vmovdqu ymm0, [rdx]
-    vmovdqu ymm1, [rdx + 32]
-    add rax, 64
+    vmovdqu ymm0, [rdx + 0x20]
+    vmovdqu ymm0, [rdx + 0x40]
+    vmovdqu ymm0, [rdx + 0x60]
+    vmovdqu ymm0, [rdx + 0x80]
+    vmovdqu ymm0, [rdx + 0xa0]
+    vmovdqu ymm0, [rdx + 0xc0]
+    vmovdqu ymm0, [rdx + 0xe0]
+    add rax, 0x100
     cmp rax, 0x3FFFFFFF
     jb .loop
     ret
