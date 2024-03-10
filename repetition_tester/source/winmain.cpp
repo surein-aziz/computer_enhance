@@ -1045,16 +1045,27 @@ s32 main(int arg_count, char** args)
 
     test_Read_Granular("1024mb read", bytes, 1024*1024*1024);
     test_Read_Granular("256mb read", bytes, 256*1024*1024);
+    test_Read_Granular("128mb read", bytes, 128*1024*1024);
     test_Read_Granular("64mb read", bytes, 64*1024*1024);
+    test_Read_Granular("48mb read", bytes, 48*1024*1024);
+    test_Read_Granular("32mb read", bytes, 32*1024*1024);
+    test_Read_Granular("24mb read", bytes, 24*1024*1024);
     test_Read_Granular("16mb read", bytes, 16*1024*1024);
     test_Read_Granular("4mb read", bytes, 4*1024*1024);
+    test_Read_Granular("3mb read", bytes, 3*1024*1024);
+    test_Read_Granular("2mb read", bytes, 2*1024*1024);
+    test_Read_Granular("1536kb read", bytes, 1536*1024);
     test_Read_Granular("1024kb read", bytes, 1024*1024);
     test_Read_Granular("256kb read", bytes, 256*1024);
     test_Read_Granular("64kb read", bytes, 64*1024);
+    test_Read_Granular("48kb read", bytes, 48*1024);
+    test_Read_Granular("32kb read", bytes, 32*1024);
+    test_Read_Granular("24kb read", bytes, 24*1024);
     test_Read_Granular("16kb read", bytes, 16*1024);
     test_Read_Granular("4kb read", bytes, 4*1024);
     test_Read_Granular("1kb read", bytes, 1*1024);
 
+    /*
     test_Read_1024mb("1024mb read", bytes);
     test_Read_256mb("256mb read", bytes);
     test_Read_64mb("64mb read", bytes);
@@ -1067,7 +1078,6 @@ s32 main(int arg_count, char** args)
     test_Read_4kb("4kb read", bytes);
     test_Read_1kb("1kb read", bytes);
 
-    /*
     const char* file_name = "../data/data_10000000.json";
     Bytes bytes;
     FILE* file = fopen(file_name, "rb");
