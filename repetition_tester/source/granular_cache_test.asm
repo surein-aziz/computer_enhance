@@ -4,7 +4,7 @@ section .text
 
 ;
 ; NOTE(surein): These ASM routines are written for the Windows
-; 64-bit ABI. They expect RCX to be the first parameter (kb of memory to test, divisible by 256b),
+; 64-bit ABI. They expect RCX to be the first parameter (b of memory to test, divisible by 256b),
 ; RDX to be the second parameter (data pointer to 1gb+ buffer),
 ; R8 to be the third parameter (number of repetitions of sized read)
 ;

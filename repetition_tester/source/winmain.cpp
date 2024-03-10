@@ -591,19 +591,20 @@ static void test_Write_x4(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
-static void test_Read_Granular(const char* label, Bytes preallocated_bytes, u64 kbs)
+static void test_Read_Granular(const char* label, Bytes preallocated_bytes, u64 bytes)
 {
-    init(label, preallocated_bytes.size);
+    u64 reps = 0x40000000 / bytes;
+    u64 total = bytes * reps;
+    init(label, total);
     do {
         u8* buffer = preallocated_bytes.buffer;
         Assert(preallocated_bytes.size > 0x3FFFFFFF);
-        u64 reps = 0x3FFFFFFF / (kbs*1024);
 
         begin();
-        Read_Granular(kbs, buffer, reps);
+        Read_Granular(bytes, buffer, reps);
         end();
         
-        count(kbs * 1024 * reps);
+        count(total);
     } while (testing());
 }
 
@@ -1042,17 +1043,17 @@ s32 main(int arg_count, char** args)
     bytes.size = 0x3FFFFFFF + 5;
     bytes.buffer = (u8*)malloc(bytes.size);
 
-    test_Read_Granular("1024mb read", bytes, 1024*1024);
-    test_Read_Granular("256mb read", bytes, 256*1024);
-    test_Read_Granular("64mb read", bytes, 64*1024);
-    test_Read_Granular("16mb read", bytes, 16*1024);
-    test_Read_Granular("4mb read", bytes, 4*1024);
-    test_Read_Granular("1024kb read", bytes, 1024);
-    test_Read_Granular("256kb read", bytes, 256);
-    test_Read_Granular("64kb read", bytes, 64);
-    test_Read_Granular("16kb read", bytes, 16);
-    test_Read_Granular("4kb read", bytes, 4);
-    test_Read_Granular("1kb read", bytes, 1);
+    test_Read_Granular("1024mb read", bytes, 1024*1024*1024);
+    test_Read_Granular("256mb read", bytes, 256*1024*1024);
+    test_Read_Granular("64mb read", bytes, 64*1024*1024);
+    test_Read_Granular("16mb read", bytes, 16*1024*1024);
+    test_Read_Granular("4mb read", bytes, 4*1024*1024);
+    test_Read_Granular("1024kb read", bytes, 1024*1024);
+    test_Read_Granular("256kb read", bytes, 256*1024);
+    test_Read_Granular("64kb read", bytes, 64*1024);
+    test_Read_Granular("16kb read", bytes, 16*1024);
+    test_Read_Granular("4kb read", bytes, 4*1024);
+    test_Read_Granular("1kb read", bytes, 1*1024);
 
     test_Read_1024mb("1024mb read", bytes);
     test_Read_256mb("256mb read", bytes);
