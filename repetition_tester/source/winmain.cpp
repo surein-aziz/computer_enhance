@@ -591,19 +591,19 @@ static void test_Write_x4(const char* label, Bytes preallocated_bytes)
     } while (testing());
 }
 
-static void test_Read_Granular(const char* label, Bytes preallocated_bytes, u64 bytes)
+static void test_Read_Granular_Offset(const char* label, Bytes preallocated_bytes_aligned, u64 bytes, u64 offset)
 {
     u64 reps = 0x40000000 / bytes;
     u64 total = bytes * reps;
+    u8* buffer = preallocated_bytes_aligned.buffer;
+    Assert(preallocated_bytes_aligned.size > 0x3FFFFFFF);
+    DecomposedVirtualAddress dva = decompose_pointer_4k(buffer);
+    Assert((dva.offset % 64) == 0);
     init(label, total);
     do {
-        u8* buffer = preallocated_bytes.buffer;
-        Assert(preallocated_bytes.size > 0x3FFFFFFF);
-
         begin();
-        Read_Granular(bytes, buffer, reps);
+        Read_Granular(bytes, buffer + offset, reps);
         end();
-        
         count(total);
     } while (testing());
 }
@@ -1040,9 +1040,34 @@ s32 main(int arg_count, char** args)
     initialize_metrics();
 
     Bytes bytes;
-    bytes.size = 0x3FFFFFFF + 5;
+    bytes.size = 0x40000000 + 64;
     bytes.buffer = (u8*)malloc(bytes.size);
 
+    // Goes to main memory on my machine
+    test_Read_Granular_Offset("1024mb read aligned", bytes, 1024*1024*1024, 0);
+    test_Read_Granular_Offset("1024mb read off-by-1", bytes, 1024*1024*1024, 1);
+    test_Read_Granular_Offset("1024mb read off-by-15", bytes, 1024*1024*1024, 15);
+    test_Read_Granular_Offset("1024mb read off-by-32", bytes, 1024*1024*1024, 32);
+
+    // Fits in L3 on my machine I think, though things are fuzzier here
+    test_Read_Granular_Offset("4mb read", bytes, 4*1024*1024, 0);
+    test_Read_Granular_Offset("4mb read", bytes, 4*1024*1024, 1);
+    test_Read_Granular_Offset("4mb read", bytes, 4*1024*1024, 15);
+    test_Read_Granular_Offset("4mb read", bytes, 4*1024*1024, 32);
+
+    // Fits in L2 on my machine I think, though things are fuzzier here
+    test_Read_Granular_Offset("256kb read aligned", bytes, 256*1024, 0);
+    test_Read_Granular_Offset("256kb read off-by-1", bytes, 256*1024, 1);
+    test_Read_Granular_Offset("256kb read off-by-15", bytes, 256*1024, 15);
+    test_Read_Granular_Offset("256kb read off-by-32", bytes, 256*1024, 32);
+
+    // Fits in L1 on my machine
+    test_Read_Granular_Offset("1kb read aligned", bytes, 1*1024, 0);
+    test_Read_Granular_Offset("1kb read off-by-1", bytes, 1*1024, 1);
+    test_Read_Granular_Offset("1kb read off-by-15", bytes, 1*1024, 15);
+    test_Read_Granular_Offset("1kb read off-by-32", bytes, 1*1024, 32);
+
+    /*
     test_Read_Granular("1024mb read", bytes, 1024*1024*1024);
     test_Read_Granular("256mb read", bytes, 256*1024*1024);
     test_Read_Granular("128mb read", bytes, 128*1024*1024);
@@ -1065,7 +1090,6 @@ s32 main(int arg_count, char** args)
     test_Read_Granular("4kb read", bytes, 4*1024);
     test_Read_Granular("1kb read", bytes, 1*1024);
 
-    /*
     test_Read_1024mb("1024mb read", bytes);
     test_Read_256mb("256mb read", bytes);
     test_Read_64mb("64mb read", bytes);
