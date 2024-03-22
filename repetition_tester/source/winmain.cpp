@@ -1050,10 +1050,10 @@ s32 main(int arg_count, char** args)
     test_Read_Granular_Offset("1024mb read off-by-32", bytes, 1024*1024*1024, 32);
 
     // Fits in L3 on my machine I think, though things are fuzzier here
-    test_Read_Granular_Offset("4mb read", bytes, 4*1024*1024, 0);
-    test_Read_Granular_Offset("4mb read", bytes, 4*1024*1024, 1);
-    test_Read_Granular_Offset("4mb read", bytes, 4*1024*1024, 15);
-    test_Read_Granular_Offset("4mb read", bytes, 4*1024*1024, 32);
+    test_Read_Granular_Offset("4mb read aligned", bytes, 4*1024*1024, 0);
+    test_Read_Granular_Offset("4mb read off-by-1", bytes, 4*1024*1024, 1);
+    test_Read_Granular_Offset("4mb read off-by-15", bytes, 4*1024*1024, 15);
+    test_Read_Granular_Offset("4mb read off-by-32", bytes, 4*1024*1024, 32);
 
     // Fits in L2 on my machine I think, though things are fuzzier here
     test_Read_Granular_Offset("256kb read aligned", bytes, 256*1024, 0);
