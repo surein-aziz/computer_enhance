@@ -20,17 +20,23 @@ Read_Fixed:
     shl r10, 6
     shl r10, cl
 
+    ; Clear loop counters rax and r11
+    xor rax, rax
+    xor r11, r11
+.outer:
+
     ; Set r9 to the base address
     xor r9, r9
     add r9, rdx
 
-    ; Clear loop counter rax
-    xor rax, rax
-.loop:
+.inner:
 
     add r9, r10
     vmovdqu ymm0, [r9]
     add rax, 0x1
     cmp rax, r8
-    jb .loop
+    jb .inner
+    add r11, 0x1
+    cmp r11, 0xFFFF
+    jb .outer
     ret
