@@ -67,7 +67,7 @@ extern "C" void Read_Granular(u64 kbs, u8* data, u64 reps);
 extern "C" void Read_Fixed(u64 fixed_count, u8* data, u64 reads);
 #pragma comment (lib, "fixed_test")
 
-static const f64 wait_ms = 10000;
+static const f64 wait_ms = 5000;
 
 static u64 cpu_freq = 0;
 static u64 target_byte_count = 0;
@@ -611,18 +611,25 @@ static void test_Read_Granular_Offset(const char* label, Bytes preallocated_byte
     } while (testing());
 }
 
-static void test_Read_Fixed(const char* label, Bytes bytes, u64 fixed_count, u64 read_count)
+static void test_Read_Fixed(const char* label_in, Bytes bytes, u64 fixed_count, u64 read_count)
 {
     // "index bits" = bits we are fixing, "tag bits" = higher bits, "n-way set associative" = uses mini caches each storing n cache lines
     // Lowest 6 bits are in the same cache line.
     Assert(6 + read_count + fixed_count <= 29);
     Assert(bytes.size > 0x3FFFFFFF); // Buffer must be at least 1gb, 2^30
 
-    u64 total = ((u64)1 << (read_count + 16))*32;
+    u8* buffer = bytes.buffer;
+    DecomposedVirtualAddress dva = decompose_pointer_4k(buffer);
+    Assert((dva.offset % 64) == 0);
+
+    u64 total = ((u64)1 << (read_count + 16))*64;
+    f64 kbs = total / 1024.0;
+    char label[200];
+    sprintf(label, "%s, read size %0.4f kbs", label_in, kbs);
     init(label, total);
     do {
         begin();
-        Read_Fixed(fixed_count, bytes.buffer, (u64)1 << read_count);
+        Read_Fixed(fixed_count, buffer, (u64)1 << read_count);
         end();
         
         count(total);
@@ -1067,34 +1074,34 @@ s32 main(int arg_count, char** args)
     // Test performance reading cache lines at positions chosen to hit a particular performance bottleneck.
     // Keep the bottom 6 bits the same -- all of these are in the same 64-byte cache line.
     // Test read performance keeping a differing number of the next lowest bits of their address fixed -- 0 through 10
-    test_Read_Fixed("No bits fixed, 8k reads", bytes, 0, 13);
-    test_Read_Fixed("1 bit fixed, 8k reads", bytes, 1, 13);
-    test_Read_Fixed("2 bits fixed, 8k reads", bytes, 2, 13);
-    test_Read_Fixed("3 bits fixed, 8k reads", bytes, 3, 13);
-    test_Read_Fixed("4 bits fixed, 8k reads", bytes, 4, 13);
-    test_Read_Fixed("5 bits fixed, 8k reads", bytes, 5, 13);
-    test_Read_Fixed("6 bits fixed, 8k reads", bytes, 6, 13);
-    test_Read_Fixed("7 bits fixed, 8k reads", bytes, 7, 13);
-    test_Read_Fixed("8 bits fixed, 8k reads", bytes, 8, 13);
-    test_Read_Fixed("9 bits fixed, 8k reads", bytes, 9, 13);
-    test_Read_Fixed("10 bits fixed, 8k reads", bytes, 10, 13);
+    test_Read_Fixed("No bits fixed", bytes, 0, 13);
+    test_Read_Fixed("1 bit fixed", bytes, 1, 13);
+    test_Read_Fixed("2 bits fixed", bytes, 2, 13);
+    test_Read_Fixed("3 bits fixed", bytes, 3, 13);
+    test_Read_Fixed("4 bits fixed", bytes, 4, 13);
+    test_Read_Fixed("5 bits fixed", bytes, 5, 13);
+    test_Read_Fixed("6 bits fixed", bytes, 6, 13);
+    test_Read_Fixed("7 bits fixed", bytes, 7, 13);
+    test_Read_Fixed("8 bits fixed", bytes, 8, 13);
+    test_Read_Fixed("9 bits fixed", bytes, 9, 13);
+    test_Read_Fixed("10 bits fixed", bytes, 10, 13);
 
-    test_Read_Fixed("No bits fixed, 256 reads", bytes, 0, 8);
-    test_Read_Fixed("1 bit fixed, 256 reads", bytes, 1, 8);
-    test_Read_Fixed("2 bits fixed, 256 reads", bytes, 2, 8);
-    test_Read_Fixed("3 bits fixed, 256 reads", bytes, 3, 8);
-    test_Read_Fixed("4 bits fixed, 256 reads", bytes, 4, 8);
-    test_Read_Fixed("5 bits fixed, 256 reads", bytes, 5, 8);
-    test_Read_Fixed("6 bits fixed, 256 reads", bytes, 6, 8);
-    test_Read_Fixed("7 bits fixed, 256 reads", bytes, 7, 8);
-    test_Read_Fixed("8 bits fixed, 256 reads", bytes, 8, 8);
-    test_Read_Fixed("9 bits fixed, 256 reads", bytes, 9, 8);
-    test_Read_Fixed("10 bits fixed, 256 reads", bytes, 10, 8);
-    test_Read_Fixed("11 bits fixed, 256 reads", bytes, 11, 8);
-    test_Read_Fixed("12 bits fixed, 256 reads", bytes, 12, 8);
-    test_Read_Fixed("13 bits fixed, 256 reads", bytes, 13, 8);
-    test_Read_Fixed("14 bits fixed, 256 reads", bytes, 14, 8);
-    test_Read_Fixed("15 bits fixed, 256 reads", bytes, 15, 8);
+    test_Read_Fixed("No bits fixed", bytes, 0, 8);
+    test_Read_Fixed("1 bit fixed", bytes, 1, 8);
+    test_Read_Fixed("2 bits fixed", bytes, 2, 8);
+    test_Read_Fixed("3 bits fixed", bytes, 3, 8);
+    test_Read_Fixed("4 bits fixed", bytes, 4, 8);
+    test_Read_Fixed("5 bits fixed", bytes, 5, 8);
+    test_Read_Fixed("6 bits fixed", bytes, 6, 8);
+    test_Read_Fixed("7 bits fixed", bytes, 7, 8);
+    test_Read_Fixed("8 bits fixed", bytes, 8, 8);
+    test_Read_Fixed("9 bits fixed", bytes, 9, 8);
+    test_Read_Fixed("10 bits fixed", bytes, 10, 8);
+    test_Read_Fixed("11 bits fixed", bytes, 11, 8);
+    test_Read_Fixed("12 bits fixed", bytes, 12, 8);
+    test_Read_Fixed("13 bits fixed", bytes, 13, 8);
+    test_Read_Fixed("14 bits fixed", bytes, 14, 8);
+    test_Read_Fixed("15 bits fixed", bytes, 15, 8);
 
     /*
     // Goes to main memory on my machine
