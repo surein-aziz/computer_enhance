@@ -622,14 +622,16 @@ static void test_Read_Fixed(const char* label_in, Bytes bytes, u64 fixed_count, 
     DecomposedVirtualAddress dva = decompose_pointer_4k(buffer);
     Assert((dva.offset % 64) == 0);
 
-    u64 total = ((u64)1 << (read_count + 16))*64;
-    f64 kbs = total / 1024.0;
+    u64 read_size = (u64)1 << read_count;
+    f64 kbs = read_size / (1024.0);
     char label[200];
     sprintf(label, "%s, read size %0.4f kbs", label_in, kbs);
+
+    u64 total = ((u64)1 << (read_count + 12))*64;
     init(label, total);
     do {
         begin();
-        Read_Fixed(fixed_count, buffer, (u64)1 << read_count);
+        Read_Fixed(fixed_count, buffer, read_size);
         end();
         
         count(total);

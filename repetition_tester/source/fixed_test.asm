@@ -39,6 +39,6 @@ Read_Fixed:
     cmp rax, r8
     jb .inner
     add r11, 0x1
-    cmp r11, 0xFFFF
+    cmp r11, 0xFFF
     jb .outer
     ret
