@@ -1067,6 +1067,18 @@ s32 main(int arg_count, char** args)
     // Test performance reading cache lines at positions chosen to hit a particular performance bottleneck.
     // Keep the bottom 6 bits the same -- all of these are in the same 64-byte cache line.
     // Test read performance keeping a differing number of the next lowest bits of their address fixed -- 0 through 10
+    test_Read_Fixed("No bits fixed, 8k reads", bytes, 0, 13);
+    test_Read_Fixed("1 bit fixed, 8k reads", bytes, 1, 13);
+    test_Read_Fixed("2 bits fixed, 8k reads", bytes, 2, 13);
+    test_Read_Fixed("3 bits fixed, 8k reads", bytes, 3, 13);
+    test_Read_Fixed("4 bits fixed, 8k reads", bytes, 4, 13);
+    test_Read_Fixed("5 bits fixed, 8k reads", bytes, 5, 13);
+    test_Read_Fixed("6 bits fixed, 8k reads", bytes, 6, 13);
+    test_Read_Fixed("7 bits fixed, 8k reads", bytes, 7, 13);
+    test_Read_Fixed("8 bits fixed, 8k reads", bytes, 8, 13);
+    test_Read_Fixed("9 bits fixed, 8k reads", bytes, 9, 13);
+    test_Read_Fixed("10 bits fixed, 8k reads", bytes, 10, 13);
+
     test_Read_Fixed("No bits fixed, 256 reads", bytes, 0, 8);
     test_Read_Fixed("1 bit fixed, 256 reads", bytes, 1, 8);
     test_Read_Fixed("2 bits fixed, 256 reads", bytes, 2, 8);
@@ -1085,18 +1097,6 @@ s32 main(int arg_count, char** args)
     test_Read_Fixed("15 bits fixed, 256 reads", bytes, 15, 8);
 
     /*
-    test_Read_Fixed("No bits fixed, 8k reads", bytes, 0, 13);
-    test_Read_Fixed("1 bit fixed, 8k reads", bytes, 1, 13);
-    test_Read_Fixed("2 bits fixed, 8k reads", bytes, 2, 13);
-    test_Read_Fixed("3 bits fixed, 8k reads", bytes, 3, 13);
-    test_Read_Fixed("4 bits fixed, 8k reads", bytes, 4, 13);
-    test_Read_Fixed("5 bits fixed, 8k reads", bytes, 5, 13);
-    test_Read_Fixed("6 bits fixed, 8k reads", bytes, 6, 13);
-    test_Read_Fixed("7 bits fixed, 8k reads", bytes, 7, 13);
-    test_Read_Fixed("8 bits fixed, 8k reads", bytes, 8, 13);
-    test_Read_Fixed("9 bits fixed, 8k reads", bytes, 9, 13);
-    test_Read_Fixed("10 bits fixed, 8k reads", bytes, 10, 13);
-
     // Goes to main memory on my machine
     test_Read_Granular_Offset("1024mb read aligned", bytes, 1024*1024*1024, 0);
     test_Read_Granular_Offset("1024mb read off-by-1", bytes, 1024*1024*1024, 1);
