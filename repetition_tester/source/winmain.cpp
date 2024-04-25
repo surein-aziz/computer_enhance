@@ -618,7 +618,7 @@ static void test_Read_Fixed(const char* label, Bytes bytes, u64 fixed_count, u64
     Assert(6 + read_count + fixed_count <= 29);
     Assert(bytes.size > 0x3FFFFFFF); // Buffer must be at least 1gb, 2^30
 
-    u64 total = (u64)1 << (read_count + 16);
+    u64 total = ((u64)1 << (read_count + 16))*32;
     init(label, total);
     do {
         begin();
