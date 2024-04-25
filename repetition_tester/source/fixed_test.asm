@@ -20,11 +20,12 @@ Read_Fixed:
     shl r10, 6
     shl r10, cl
 
-    ; Clear loop counters rax and r11
-    xor rax, rax
+    ; Clear outer loop counter
     xor r11, r11
 .outer:
 
+    ; Clear inner loop counter
+    xor rax, rax
     ; Set r9 to the base address
     xor r9, r9
     add r9, rdx
