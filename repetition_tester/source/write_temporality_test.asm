@@ -6,13 +6,13 @@ section .text
 ;
 ; NOTE(surein): These ASM routines are written for the Windows
 ; 64-bit ABI. They expect RCX to be the first parameter (data pointer to 16kb+ buffer),
-; RDX to be the second parameter (data pointer to 16mb+ buffer),
+; RDX to be the second parameter (data pointer to 256mb+ buffer),
 ;
 
 Write_Temporal:
 	align 64
     xor r8, r8
-    add r8, 0x200
+    add r8, 0x2000
     xor r10, r10
     add r10, rdx
 .outer:
@@ -48,7 +48,7 @@ ret
 Write_Non_Temporal:
 	align 64
     xor r8, r8
-    add r8, 0x200
+    add r8, 0x2000
     xor r10, r10
     add r10, rdx
 .outer:

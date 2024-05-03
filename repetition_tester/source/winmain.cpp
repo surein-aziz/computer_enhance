@@ -618,7 +618,7 @@ static void test_Read_Granular_Offset(const char* label, Bytes preallocated_byte
 static void test_Write_Temporal(const char* label, Bytes bytes_read, Bytes bytes_write)
 {
     Assert(bytes_read.size > 0x3FFF); // Read bytes at least 16kb
-    Assert(bytes_write.size > 0xFFFFFF); // Write bytes at least 16mb
+    Assert(bytes_write.size > 0x3FFFFFFF); // Write bytes at least 1gb
 
     u8* read_buffer = bytes_read.buffer;
     DecomposedVirtualAddress read_dva = decompose_pointer_4k(read_buffer);
@@ -627,7 +627,7 @@ static void test_Write_Temporal(const char* label, Bytes bytes_read, Bytes bytes
     DecomposedVirtualAddress write_dva = decompose_pointer_4k(write_buffer);
     Assert((write_dva.offset % 64) == 0);
 
-    u64 total = 1 << 25;
+    u64 total = 1 << 28;
     init(label, total);
     do {
         begin();
@@ -641,7 +641,7 @@ static void test_Write_Temporal(const char* label, Bytes bytes_read, Bytes bytes
 static void test_Write_Non_Temporal(const char* label, Bytes bytes_read, Bytes bytes_write)
 {
     Assert(bytes_read.size > 0x3FFF); // Read bytes at least 16kb
-    Assert(bytes_write.size > 0xFFFFFF); // Write bytes at least 16mb
+    Assert(bytes_write.size > 0x3FFFFFFF); // Write bytes at least 1gb
 
     u8* read_buffer = bytes_read.buffer;
     DecomposedVirtualAddress read_dva = decompose_pointer_4k(read_buffer);
@@ -650,7 +650,7 @@ static void test_Write_Non_Temporal(const char* label, Bytes bytes_read, Bytes b
     DecomposedVirtualAddress write_dva = decompose_pointer_4k(write_buffer);
     Assert((write_dva.offset % 64) == 0);
 
-    u64 total = 1 << 25;
+    u64 total = 1 << 28;
     init(label, total);
     do {
         begin();
@@ -1121,16 +1121,16 @@ s32 main(int arg_count, char** args)
 
     Bytes bytes_read;
     bytes_read.size = 0x10000;
-    bytes_read.buffer = (u8*)malloc(bytes_read.size);
+    bytes_read.buffer = (u8*)_mm_malloc(bytes_read.size, 64);
 
     Bytes bytes_write;
-    bytes_write.size = 0x40000000 + 64;
-    bytes_write.buffer = (u8*)malloc(bytes_write.size);
+    bytes_write.size = 0x40000000;
+    bytes_write.buffer = (u8*)_mm_malloc(bytes_write.size, 64);
 
     // Test non-temporal stores.
-    // Copy 16kb of memory 1024 times into 16mb.
-    test_Write_Temporal("1024 copies of 16kb, temporal stores", bytes_read, bytes_write);
-    test_Write_Non_Temporal("1024 copies of 16kb, non temporal stores", bytes_read, bytes_write);
+    // Copy 16kb of memory 16384 times into 256mb.
+    test_Write_Temporal("16384 copies of 16kb, temporal stores", bytes_read, bytes_write);
+    test_Write_Non_Temporal("16384 copies of 16kb, non temporal stores", bytes_read, bytes_write);
 
     /*
     // Test performance reading cache lines at positions chosen to hit a particular performance bottleneck.
