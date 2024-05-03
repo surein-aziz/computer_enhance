@@ -67,6 +67,10 @@ extern "C" void Read_Granular(u64 kbs, u8* data, u64 reps);
 extern "C" void Read_Fixed(u64 fixed_count, u8* data, u64 reads);
 #pragma comment (lib, "fixed_test")
 
+extern "C" void Write_Temporal(u8* read_data, u8* write_data);
+extern "C" void Write_Non_Temporal(u8* read_data, u8* write_data);
+#pragma comment (lib, "write_temporality_test")
+
 static const f64 wait_ms = 5000;
 
 static u64 cpu_freq = 0;
@@ -611,6 +615,52 @@ static void test_Read_Granular_Offset(const char* label, Bytes preallocated_byte
     } while (testing());
 }
 
+static void test_Write_Temporal(const char* label, Bytes bytes_read, Bytes bytes_write)
+{
+    Assert(bytes_read.size > 0x3FFF); // Read bytes at least 16kb
+    Assert(bytes_write.size > 0xFFFFFF); // Write bytes at least 16mb
+
+    u8* read_buffer = bytes_read.buffer;
+    DecomposedVirtualAddress read_dva = decompose_pointer_4k(read_buffer);
+    Assert((read_dva.offset % 64) == 0);
+    u8* write_buffer = bytes_write.buffer;
+    DecomposedVirtualAddress write_dva = decompose_pointer_4k(write_buffer);
+    Assert((write_dva.offset % 64) == 0);
+
+    u64 total = 1 << 25;
+    init(label, total);
+    do {
+        begin();
+        Write_Temporal(read_buffer, write_buffer);
+        end();
+        
+        count(total);
+    } while (testing());
+}
+
+static void test_Write_Non_Temporal(const char* label, Bytes bytes_read, Bytes bytes_write)
+{
+    Assert(bytes_read.size > 0x3FFF); // Read bytes at least 16kb
+    Assert(bytes_write.size > 0xFFFFFF); // Write bytes at least 16mb
+
+    u8* read_buffer = bytes_read.buffer;
+    DecomposedVirtualAddress read_dva = decompose_pointer_4k(read_buffer);
+    Assert((read_dva.offset % 64) == 0);
+    u8* write_buffer = bytes_write.buffer;
+    DecomposedVirtualAddress write_dva = decompose_pointer_4k(write_buffer);
+    Assert((write_dva.offset % 64) == 0);
+
+    u64 total = 1 << 25;
+    init(label, total);
+    do {
+        begin();
+        Write_Non_Temporal(read_buffer, write_buffer);
+        end();
+        
+        count(total);
+    } while (testing());
+}
+
 static void test_Read_Fixed(const char* label_in, Bytes bytes, u64 fixed_count, u64 read_count)
 {
     // "index bits" = bits we are fixing, "tag bits" = higher bits, "n-way set associative" = uses mini caches each storing n cache lines
@@ -1069,10 +1119,20 @@ s32 main(int arg_count, char** args)
 {
     initialize_metrics();
 
-    Bytes bytes;
-    bytes.size = 0x40000000 + 64;
-    bytes.buffer = (u8*)malloc(bytes.size);
+    Bytes bytes_read;
+    bytes_read.size = 0x10000;
+    bytes_read.buffer = (u8*)malloc(bytes_read.size);
 
+    Bytes bytes_write;
+    bytes_write.size = 0x40000000 + 64;
+    bytes_write.buffer = (u8*)malloc(bytes_write.size);
+
+    // Test non-temporal stores.
+    // Copy 16kb of memory 1024 times into 16mb.
+    test_Write_Temporal("1024 copies of 16kb, temporal stores", bytes_read, bytes_write);
+    test_Write_Non_Temporal("1024 copies of 16kb, non temporal stores", bytes_read, bytes_write);
+
+    /*
     // Test performance reading cache lines at positions chosen to hit a particular performance bottleneck.
     // Keep the bottom 6 bits the same -- all of these are in the same 64-byte cache line.
     // Test read performance keeping a differing number of the next lowest bits of their address fixed -- 0 through 10
@@ -1105,7 +1165,6 @@ s32 main(int arg_count, char** args)
     test_Read_Fixed("14 bits fixed", bytes, 14, 8);
     test_Read_Fixed("15 bits fixed", bytes, 15, 8);
 
-    /*
     // Goes to main memory on my machine
     test_Read_Granular_Offset("1024mb read aligned", bytes, 1024*1024*1024, 0);
     test_Read_Granular_Offset("1024mb read off-by-1", bytes, 1024*1024*1024, 1);
