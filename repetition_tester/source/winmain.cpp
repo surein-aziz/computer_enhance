@@ -71,6 +71,10 @@ extern "C" void Write_Temporal(u8* read_data, u8* write_data);
 extern "C" void Write_Non_Temporal(u8* read_data, u8* write_data);
 #pragma comment (lib, "write_temporality_test")
 
+extern "C" void Random_Math(u8* random_data, u8* math_data);
+extern "C" void Random_Math_Prefetch(u8* random_data, u8* math_data);
+#pragma comment (lib, "prefetch_math_test")
+
 static const f64 wait_ms = 5000;
 
 static u64 cpu_freq = 0;
@@ -661,6 +665,52 @@ static void test_Write_Non_Temporal(const char* label, Bytes bytes_read, Bytes b
     } while (testing());
 }
 
+static void test_Random_Math(const char* label, Bytes bytes_random, Bytes bytes_buffer)
+{
+    Assert(bytes_read.size >= 0x10000); // Read bytes at least 64kb
+    Assert(bytes_write.size >= 0x40000000); // Write bytes at least 1gb
+
+    u8* random_buffer = bytes_random.buffer;
+    DecomposedVirtualAddress random_dva = decompose_pointer_4k(random_buffer);
+    Assert((random_dva.offset % 64) == 0);
+    u8* math_buffer = bytes_buffer.buffer;
+    DecomposedVirtualAddress math_dva = decompose_pointer_4k(math_buffer);
+    Assert((math_dva.offset % 64) == 0);
+
+    u64 total = 8*1024*64;
+    init(label, total);
+    do {
+        begin();
+        Random_Math(random_buffer, math_buffer);
+        end();
+        
+        count(total);
+    } while (testing());
+}
+
+static void test_Random_Math_Prefetch(const char* label, Bytes bytes_random, Bytes bytes_buffer)
+{
+    Assert(bytes_read.size >= 0x10000); // Read bytes at least 64kb
+    Assert(bytes_write.size >= 0x40000000); // Write bytes at least 1gb
+
+    u8* random_buffer = bytes_random.buffer;
+    DecomposedVirtualAddress random_dva = decompose_pointer_4k(random_buffer);
+    Assert((random_dva.offset % 64) == 0);
+    u8* math_buffer = bytes_buffer.buffer;
+    DecomposedVirtualAddress math_dva = decompose_pointer_4k(math_buffer);
+    Assert((math_dva.offset % 64) == 0);
+
+    u64 total = 8*1024*64;
+    init(label, total);
+    do {
+        begin();
+        Random_Math_Prefetch(random_buffer, math_buffer);
+        end();
+        
+        count(total);
+    } while (testing());
+}
+
 static void test_Read_Fixed(const char* label_in, Bytes bytes, u64 fixed_count, u64 read_count)
 {
     // "index bits" = bits we are fixing, "tag bits" = higher bits, "n-way set associative" = uses mini caches each storing n cache lines
@@ -1119,20 +1169,38 @@ s32 main(int arg_count, char** args)
 {
     initialize_metrics();
 
-    Bytes bytes_read;
-    bytes_read.size = 0x10000;
-    bytes_read.buffer = (u8*)_mm_malloc(bytes_read.size, 64);
+    // 64kb
+    Bytes bytes_random;
+    bytes_random.size = 0x10000;
+    bytes_random.buffer = (u8*)_mm_malloc(bytes_random.size, 64);
 
-    Bytes bytes_write;
-    bytes_write.size = 0x40000000;
-    bytes_write.buffer = (u8*)_mm_malloc(bytes_write.size, 64);
+    // 1gb
+    Bytes bytes_buffer;
+    bytes_buffer.size = 0x40000000;
+    bytes_buffer.buffer = (u8*)_mm_malloc(bytes_buffer.size, 64);
 
+    // Fill bytes_random with random offsets into the 1gb buffer.
+    for (u64 i = 0; i < 8*1024; ++i) {
+        u64 offset = rand() % bytes_buffer.size;
+        memcpy(bytes_random.buffer + 8*i, &offset, 8);
+    }
+
+    // Fill bytes_buffer with ascending count.
+    for (u64 i = 0; i < bytes_buffer.size/8; ++i) {
+        memcpy(bytes_buffer.buffer + 8*i, &i, 8);
+    }
+
+    // Test prefetching.
+    // Do maths on 64 bytes from a random point in a 1gb buffer, 8*1024 times.
+    test_Random_Math("Math at random place in buffer without prefetch.", bytes_random, bytes_buffer);
+    test_Random_Math_Prefetch("Math at random place in buffer with prefetch.", bytes_random, bytes_buffer);
+
+    /*
     // Test non-temporal stores.
     // Copy 16kb of memory 16384 times into 256mb.
     test_Write_Temporal("16384 copies of 16kb, temporal stores", bytes_read, bytes_write);
     test_Write_Non_Temporal("16384 copies of 16kb, non temporal stores", bytes_read, bytes_write);
 
-    /*
     // Test performance reading cache lines at positions chosen to hit a particular performance bottleneck.
     // Keep the bottom 6 bits the same -- all of these are in the same 64-byte cache line.
     // Test read performance keeping a differing number of the next lowest bits of their address fixed -- 0 through 10
