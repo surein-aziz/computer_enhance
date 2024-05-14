@@ -667,8 +667,8 @@ static void test_Write_Non_Temporal(const char* label, Bytes bytes_read, Bytes b
 
 static void test_Random_Math(const char* label, Bytes bytes_random, Bytes bytes_buffer)
 {
-    Assert(bytes_read.size >= 0x10000); // Read bytes at least 64kb
-    Assert(bytes_write.size >= 0x40000000); // Write bytes at least 1gb
+    Assert(bytes_random.size >= 0x10000); // Read bytes at least 64kb
+    Assert(bytes_buffer.size >= 0x40000000); // Write bytes at least 1gb
 
     u8* random_buffer = bytes_random.buffer;
     DecomposedVirtualAddress random_dva = decompose_pointer_4k(random_buffer);
@@ -690,8 +690,8 @@ static void test_Random_Math(const char* label, Bytes bytes_random, Bytes bytes_
 
 static void test_Random_Math_Prefetch(const char* label, Bytes bytes_random, Bytes bytes_buffer)
 {
-    Assert(bytes_read.size >= 0x10000); // Read bytes at least 64kb
-    Assert(bytes_write.size >= 0x40000000); // Write bytes at least 1gb
+    Assert(bytes_random.size >= 0x10000); // Read bytes at least 64kb
+    Assert(bytes_buffer.size >= 0x40000000); // Write bytes at least 1gb
 
     u8* random_buffer = bytes_random.buffer;
     DecomposedVirtualAddress random_dva = decompose_pointer_4k(random_buffer);
@@ -1187,7 +1187,8 @@ s32 main(int arg_count, char** args)
 
     // Fill bytes_buffer with ascending count.
     for (u64 i = 0; i < bytes_buffer.size/8; ++i) {
-        memcpy(bytes_buffer.buffer + 8*i, &i, 8);
+        f64 f = (f64)i;
+        memcpy(bytes_buffer.buffer + 8*i, &f, 8);
     }
 
     // Test prefetching.

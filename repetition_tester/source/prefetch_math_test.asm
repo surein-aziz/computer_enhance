@@ -11,72 +11,48 @@ section .text
 
 Random_Math:
 	align 64
-    xor r8, r8
-    add r8, 0x2000
-    xor r10, r10
-    add r10, rdx
-.outer:
     xor rax, rax
-    .inner:
-        xor r9, r9
-        add r9, rax
-        add r9, rcx
-        vmovdqu ymm0, [r9]
-        vmovdqu [r10], ymm0
-        vmovdqu ymm0, [r9 + 0x20]
-        vmovdqu [r10 + 0x20], ymm0
-        vmovdqu ymm0, [r9 + 0x40]
-        vmovdqu [r10 + 0x40], ymm0
-        vmovdqu ymm0, [r9 + 0x60]
-        vmovdqu [r10 + 0x60], ymm0
-        vmovdqu ymm0, [r9 + 0x80]
-        vmovdqu [r10 + 0x80], ymm0
-        vmovdqu ymm0, [r9 + 0xa0]
-        vmovdqu [r10 + 0xa0], ymm0
-        vmovdqu ymm0, [r9 + 0xc0]
-        vmovdqu [r10 + 0xc0], ymm0
-        vmovdqu ymm0, [r9 + 0xe0]
-        vmovdqu [r10 + 0xe0], ymm0
-        add r10, 0x100
-        add rax, 0x100
-        cmp rax, 0x3FFF
-        jb .inner
-    dec r8
-    jnz .outer
+    add rax, rcx
+.loop:
+    mov r8, [rax]
+    vmovdqu ymm0, [rdx + r8]
+    vmulpd ymm0, ymm0
+    vmulpd ymm0, ymm0
+    vmulpd ymm0, ymm0
+    vmulpd ymm0, ymm0
+    vmovdqu [rdx + r8], ymm0
+    mov r8, [rax + 8]
+    vmovdqu ymm0, [rdx + r8]
+    vmulpd ymm0, ymm0
+    vmulpd ymm0, ymm0
+    vmulpd ymm0, ymm0
+    vmulpd ymm0, ymm0
+    vmovdqu [rdx + r8], ymm0
+    add rax, 16
+    cmp rax, 0xFFFF
+    jb .loop
 ret
 
 Random_Math_Prefetch:
 	align 64
-    xor r8, r8
-    add r8, 0x2000
-    xor r10, r10
-    add r10, rdx
-.outer:
     xor rax, rax
-    .inner:
-        xor r9, r9
-        add r9, rax
-        add r9, rcx
-        vmovdqu ymm0, [r9]
-        vmovntdq [r10], ymm0
-        vmovdqu ymm0, [r9 + 0x20]
-        vmovntdq [r10 + 0x20], ymm0
-        vmovdqu ymm0, [r9 + 0x40]
-        vmovntdq [r10 + 0x40], ymm0
-        vmovdqu ymm0, [r9 + 0x60]
-        vmovntdq [r10 + 0x60], ymm0
-        vmovdqu ymm0, [r9 + 0x80]
-        vmovntdq [r10 + 0x80], ymm0
-        vmovdqu ymm0, [r9 + 0xa0]
-        vmovntdq [r10 + 0xa0], ymm0
-        vmovdqu ymm0, [r9 + 0xc0]
-        vmovntdq [r10 + 0xc0], ymm0
-        vmovdqu ymm0, [r9 + 0xe0]
-        vmovntdq [r10 + 0xe0], ymm0
-        add r10, 0x100
-        add rax, 0x100
-        cmp rax, 0x3FFF
-        jb .inner
-    dec r8
-    jnz .outer
+    add rax, rcx
+.loop:
+    mov r8, [rax]
+    vmovdqu ymm0, [rdx + r8]
+    vmulpd ymm0, ymm0
+    vmulpd ymm0, ymm0
+    vmulpd ymm0, ymm0
+    vmulpd ymm0, ymm0
+    vmovdqu [rdx + r8], ymm0
+    mov r8, [rax + 8]
+    vmovdqu ymm0, [rdx + r8]
+    vmulpd ymm0, ymm0
+    vmulpd ymm0, ymm0
+    vmulpd ymm0, ymm0
+    vmulpd ymm0, ymm0
+    vmovdqu [rdx + r8], ymm0
+    add rax, 16
+    cmp rax, 0xFFFF
+    jb .loop
 ret
