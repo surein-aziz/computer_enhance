@@ -5,7 +5,7 @@ section .text
 
 ;
 ; NOTE(surein): These ASM routines are written for the Windows
-; 64-bit ABI. They expect RCX to be the first parameter (data pointer to 64kb+ buffer),
+; 64-bit ABI. They expect RCX to be the first parameter (data pointer to 16mb+ buffer),
 ; RDX to be the second parameter (data pointer to 1gb+ buffer),
 ;
 
@@ -22,23 +22,17 @@ Random_Math:
     vmovdqu ymm0, [rdx + r9]
     vmulpd ymm0, ymm0
     vmulpd ymm0, ymm0
-    vmulpd ymm0, ymm0
-    vmulpd ymm0, ymm0
     vmovdqu [rdx + r9], ymm0
     vmovdqu ymm0, [rdx + r10]
-    vmulpd ymm0, ymm0
-    vmulpd ymm0, ymm0
     vmulpd ymm0, ymm0
     vmulpd ymm0, ymm0
     vmovdqu [rdx + r10], ymm0
     vmovdqu ymm0, [rdx + r11]
     vmulpd ymm0, ymm0
     vmulpd ymm0, ymm0
-    vmulpd ymm0, ymm0
-    vmulpd ymm0, ymm0
     vmovdqu [rdx + r11], ymm0
     add rax, 24
-    cmp rax, 0xFFFF
+    cmp rax, 0xFFFFFF
     jb .loop
 ret
 
@@ -57,22 +51,16 @@ Random_Math_Prefetch:
     vmovdqu ymm0, [rdx + r9]
     vmulpd ymm0, ymm0
     vmulpd ymm0, ymm0
-    vmulpd ymm0, ymm0
-    vmulpd ymm0, ymm0
     vmovdqu [rdx + r9], ymm0
     vmovdqu ymm0, [rdx + r10]
-    vmulpd ymm0, ymm0
-    vmulpd ymm0, ymm0
     vmulpd ymm0, ymm0
     vmulpd ymm0, ymm0
     vmovdqu [rdx + r10], ymm0
     vmovdqu ymm0, [rdx + r11]
     vmulpd ymm0, ymm0
     vmulpd ymm0, ymm0
-    vmulpd ymm0, ymm0
-    vmulpd ymm0, ymm0
     vmovdqu [rdx + r11], ymm0
     add rax, 24
-    cmp rax, 0xFFFF
+    cmp rax, 0xFFFFFF
     jb .loop
 ret

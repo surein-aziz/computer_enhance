@@ -667,7 +667,7 @@ static void test_Write_Non_Temporal(const char* label, Bytes bytes_read, Bytes b
 
 static void test_Random_Math(const char* label, Bytes bytes_random, Bytes bytes_buffer)
 {
-    Assert(bytes_random.size >= 0x10000); // Read bytes at least 64kb
+    Assert(bytes_random.size >= 0x1000000); // Read bytes at least 16mb
     Assert(bytes_buffer.size >= 0x40000000); // Write bytes at least 1gb
 
     u8* random_buffer = bytes_random.buffer;
@@ -677,7 +677,7 @@ static void test_Random_Math(const char* label, Bytes bytes_random, Bytes bytes_
     DecomposedVirtualAddress math_dva = decompose_pointer_4k(math_buffer);
     Assert((math_dva.offset % 64) == 0);
 
-    u64 total = 8*1024*64;
+    u64 total = 0x1000000*8;
     init(label, total);
     do {
         begin();
@@ -690,7 +690,7 @@ static void test_Random_Math(const char* label, Bytes bytes_random, Bytes bytes_
 
 static void test_Random_Math_Prefetch(const char* label, Bytes bytes_random, Bytes bytes_buffer)
 {
-    Assert(bytes_random.size >= 0x10000); // Read bytes at least 64kb
+    Assert(bytes_random.size >= 0x1000000); // Read bytes at least 16mb
     Assert(bytes_buffer.size >= 0x40000000); // Write bytes at least 1gb
 
     u8* random_buffer = bytes_random.buffer;
@@ -700,7 +700,7 @@ static void test_Random_Math_Prefetch(const char* label, Bytes bytes_random, Byt
     DecomposedVirtualAddress math_dva = decompose_pointer_4k(math_buffer);
     Assert((math_dva.offset % 64) == 0);
 
-    u64 total = 8*1024*64;
+    u64 total = 0x1000000*8;
     init(label, total);
     do {
         begin();
@@ -1169,9 +1169,9 @@ s32 main(int arg_count, char** args)
 {
     initialize_metrics();
 
-    // 64kb
+    // 16mb
     Bytes bytes_random;
-    bytes_random.size = 0x10000;
+    bytes_random.size = 0x1000000;
     bytes_random.buffer = (u8*)_mm_malloc(bytes_random.size, 64);
 
     // 1gb
@@ -1179,10 +1179,11 @@ s32 main(int arg_count, char** args)
     bytes_buffer.size = 0x40000000;
     bytes_buffer.buffer = (u8*)_mm_malloc(bytes_buffer.size, 64);
 
+    fill_with_random_bytes(bytes_random);
     // Fill bytes_random with random offsets into the 1gb buffer.
-    for (u64 i = 0; i < 8*1024; ++i) {
-        u64 offset = rand() % bytes_buffer.size;
-        memcpy(bytes_random.buffer + 8*i, &offset, 8);
+    for (u64 i = 0; i < bytes_random.size/8; ++i) {
+        u64* bytes_u64 = (u64*)bytes_random.buffer;
+        bytes_u64[i] = bytes_u64[i] % bytes_buffer.size;
     }
 
     // Fill bytes_buffer with ascending count.
@@ -1192,7 +1193,7 @@ s32 main(int arg_count, char** args)
     }
 
     // Test prefetching.
-    // Do maths on 64 bytes from a random point in a 1gb buffer, 8*1024 times.
+    // Do maths on 64 bytes from a random point in a 1gb buffer, lots of times.
     test_Random_Math("Math at random place in buffer without prefetch.", bytes_random, bytes_buffer);
     test_Random_Math_Prefetch("Math at random place in buffer with prefetch.", bytes_random, bytes_buffer);
 
