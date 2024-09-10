@@ -1,0 +1,8 @@
+Processed 10000000 calculations, as expected.
+Result was 8600.2131016959556, as expected.
+
+Total time: 21210.022ms (CPU freq 2496065580)
+calculate_haversine[1] 1271569850 (2.40%), exclusive 1271569850 (2.40%) 305.18mb at 0.59gb/s
+get_points_array[1] 50725399292 (95.81%), exclusive 50725399292 (95.81%) 991.86mb at 0.05gb/s
+parse_haversine_json[1] 50725401150 (95.81%), exclusive 1858 (0.00%) 991.86mb at 0.05gb/s
+fread[2] 469763317 (0.89%), exclusive 469763317 (0.89%) 1068.16mb at 5.54gb/s
