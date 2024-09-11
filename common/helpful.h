@@ -257,7 +257,7 @@ struct Mat3x3
     }
 };
 
-// we use row  major representation, column vectors
+// we use row major representation, column vectors
 struct Mat4x4
 {
     r32 elems[16];
