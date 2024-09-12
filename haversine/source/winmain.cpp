@@ -23,7 +23,7 @@ void write_entire_file(Bytes bytes, const char* file_path)
     fclose(file);
 }
 
-Bytes read_entire_file(const char* file_path, bool add_null_term)
+Bytes read_entire_file(const char* file_path)
 {
     Bytes bytes;
     
@@ -32,9 +32,6 @@ Bytes read_entire_file(const char* file_path, bool add_null_term)
     
     bytes.size = ftell(file);
     s32 read_size = bytes.size;
-    if (add_null_term) {
-        bytes.size++;
-    }
     bytes.buffer = (u8*)malloc(bytes.size);
     
     {
@@ -43,9 +40,6 @@ Bytes read_entire_file(const char* file_path, bool add_null_term)
         fseek(file, 0, SEEK_SET);
         fread(bytes.buffer, 1, read_size, file);
         fclose(file);
-        if (add_null_term) {
-            bytes.buffer[bytes.size-1] = 0;
-        }
     }
 
     return bytes;
@@ -75,19 +69,19 @@ void compare_results(HaversineResult result, HaversineResult reference_result) {
 
 HaversineResult get_reference_results(const char* file_name)
 {
-    Bytes binary = read_entire_file(file_name, false);
+    Bytes binary = read_entire_file(file_name);
     u64 num = binary.size/(sizeof(f64))-1; // Binary contains each individual result and then the averaged result at the end.
     f64* f64_buffer = (f64*)binary.buffer;
     return { f64_buffer, f64_buffer[num], num };
 }
 
-s32 main(int arg_count, char** args)
+int main()
 {
     initialize_metrics();
     time_program_start();
 
     // Parse json
-    Bytes json = read_entire_file("../data/data_10000000.json", true);
+    Bytes json = read_entire_file("../data/data_10000000.json");
     HaversineData data = parse_haversine_json(json);
 
     // Calculate haversines
