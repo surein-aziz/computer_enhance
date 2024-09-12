@@ -46,7 +46,7 @@ void read_chunk(BytesChunks* chunks, b32 read0)
     if (chunks->file_cursor + read_size > chunks->file_size) { 
         read_size = chunks->file_size - chunks->file_cursor;
         // Set buffer to zero for final read.
-        memset(*buffer_ptr, 0, chunks->chunk_size);
+        memset(*buffer_ptr, 0, chunks->chunk_size+chunks->extra_size);
     }
     fread((*buffer_ptr)+chunks->extra_size, 1, read_size, file);
     chunks->file_cursor += read_size;

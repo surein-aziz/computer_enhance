@@ -55,39 +55,47 @@ HaversineData get_points_array(BytesChunks chunks, char* json, u64 cursor) {
     u64 length = chunks.chunk_size;
     u64 i = 0;
     b32 current_buffer0 = 1;
+    b32 final_chunk = FALSE;
     while (TRUE) {
         // Check if next element is guaranteed to fit in remainder of chunk.
         // If not, and there are remaining chunks, transfer to the next chunk.
         // Copy the rest of the chunk into the extra space before the next chunk, mark it as complete, and read the next chunk into the completed chunk.
         // TODO: multithreading -- mark chunk as completed for read thread, spin until next chunk is ready if not ready.
-        if (length - cursor < MAXIMUM_ENCODING_BYTES && chunks.file_cursor < chunks.file_size) {
+        if (length - cursor < MAXIMUM_ENCODING_BYTES) {
             Assert(current_buffer0 ? !chunks.buffer1_complete : !chunks.buffer0_complete);
             u64 remainder_bytes = length - cursor;
             u8* next_buffer = current_buffer0 ? chunks.buffer1 : chunks.buffer0;
             next_buffer += chunks.extra_size - remainder_bytes;
-            memcpy(next_buffer, json, remainder_bytes);
-            if (current_buffer0) {
-                chunks.buffer0_complete = TRUE;
-                read_chunk(&chunks, TRUE);
+            memcpy(next_buffer, json + cursor, remainder_bytes);
+            if (chunks.file_cursor >= chunks.file_size) {
+                final_chunk = TRUE;
             } else {
-                chunks.buffer1_complete = TRUE;
-                read_chunk(&chunks, FALSE);
+                // Read next chunk.
+                if (current_buffer0) {
+                    chunks.buffer0_complete = TRUE;
+                    read_chunk(&chunks, TRUE);
+                } else {
+                    chunks.buffer1_complete = TRUE;
+                    read_chunk(&chunks, FALSE);
+                }
             }
             current_buffer0 = !current_buffer0;
 
             json = (char*)next_buffer;
             cursor = 0;
             length = chunks.chunk_size + remainder_bytes;
+            if (chunks.file_cursor >= chunks.file_size) final_chunk = TRUE; 
         }
 
         cursor = find_char(json, length, cursor, '{');
         if (cursor >= length) {
-            if (chunks.file_cursor < chunks.file_size) {
+            if (final_chunk) {
+                // We're done
+                break;
+            } else {
                 // There are more chunks to come, skip to next loop to load next chunk.
                 continue;
             }
-            // We are all done.
-            break;
         }
         cursor = find_element(json, length, cursor, "\"x0\"");
         data.x0[i] = parse_f64(json, length, cursor);
