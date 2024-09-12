@@ -1,0 +1,9 @@
+
+Total time: 5802.1631ms (CPU freq 2496051390)
+fread[496] 322888144 (2.23%), exclusive 322888144 (2.23%) 992.00mb at 7.49gb/s
+calculate_haversine[1] 517501402 (3.57%), exclusive 517501402 (3.57%) 305.18mb at 1.44gb/s
+get_points_array[1] 13961539198 (96.40%), exclusive 13641940887 (94.20%) 991.86mb at 0.17gb/s
+
+Processed 10000000 calculations, as expected.
+Result was within tolerance of 8600.2131016959556, as expected.
+Delta was 5.0931703299283981e-10.
