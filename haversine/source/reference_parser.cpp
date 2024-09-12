@@ -62,6 +62,8 @@ HaversineData get_points_array(FileReadData json_data, char* json, u64 cursor) {
         // If not, and there are remaining chunks, transfer to the next chunk.
         // Copy the rest of the chunk into the extra space before the next chunk, mark it as complete, and read the next chunk into the completed chunk.
         if (length - cursor < MAXIMUM_ENCODING_BYTES) {
+            TimeScope time_scope_chunks("chunk_synchronization", __COUNTER__+1, 0, TRUE);
+
             // Wait for next chunk to be read, or finish if there are no more chunks.
             MemoryBarrier();
             if (current_buffer0) {
@@ -82,7 +84,7 @@ HaversineData get_points_array(FileReadData json_data, char* json, u64 cursor) {
             if (current_buffer0) {
                 while (InterlockedCompareExchange((long*)json_data.buffer0_complete, TRUE, FALSE) != TRUE);
             } else {
-                while (InterlockedCompareExchange((long*)json_data.buffer0_complete, TRUE, FALSE) != TRUE);
+                while (InterlockedCompareExchange((long*)json_data.buffer1_complete, TRUE, FALSE) != TRUE);
             }
             MemoryBarrier();
             current_buffer0 = !current_buffer0;

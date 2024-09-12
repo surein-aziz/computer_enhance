@@ -13,7 +13,8 @@ static u64 program_start = 0;
 
 #else
 
-#define TIME_BANDWIDTH(Name, ByteCount) TimeScope time_scope(Name, __COUNTER__+1, ByteCount)
+#define TIME_BANDWIDTH(Name, ByteCount) TimeScope time_scope(Name, __COUNTER__+1, ByteCount, TRUE)
+#define TIME_BANDWIDTH_THREAD(Name, ByteCount) TimeScope time_scope(Name, __COUNTER__+1, ByteCount, FALSE)
 #define TIME_FUNCTION TIME_BANDWIDTH(__FUNCTION__, 0)
 #define ASSERT_ENOUGH_TIMEINFOS static_assert(__COUNTER__ < TOTAL_TIMEINFOS)
 #define TOTAL_TIMEINFOS 4096
@@ -24,22 +25,25 @@ struct TimeInfo {
 	u64 inclusive_time = 0;
 	u64 exclusive_time = 0;
 	u64 byte_count = 0;
+	b32 on_main_thread = 0;
 };
 static u64 active_index = 0;
 
 static TimeInfo time_infos[TOTAL_TIMEINFOS];
 
 struct TimeScope {
-	TimeScope(const char* name_, s32 counter, u64 byte_count) {
+	//TODO(surein): do a better job with time infos not on main thread
+	TimeScope(const char* name_, s32 counter, u64 byte_count, b32 on_main_thread_) {
 		Assert(program_start > 0);
 		index = counter;
 		name = name_;
-		if (active_index) {
+		on_main_thread = on_main_thread_;
+		if (active_index && on_main_thread) {
 			parent_index = active_index;
 		}
 		inclusive_start = time_infos[index].inclusive_time;
 		time_infos[index].byte_count += byte_count;
-		active_index = index;
+		if (on_main_thread) active_index = index;
 		start = read_cpu_timer();
 	}
 
@@ -48,14 +52,15 @@ struct TimeScope {
 		u64 elapsed = read_cpu_timer() - start;
 		time_infos[index].name = name;
 		time_infos[index].count++;
+		time_infos[index].on_main_thread = on_main_thread;
 		// Add elapsed to inclusive time when starting this block, overwriting any recursive time.
 		time_infos[index].inclusive_time = inclusive_start + elapsed;
 		// Add elapsed to exclusive time -- this needs to include recursive time and subtract child time.
 		time_infos[index].exclusive_time += elapsed;
-		if (parent_index) {
+		if (parent_index && on_main_thread) {
 			time_infos[parent_index].exclusive_time -= elapsed;
 		}
-		active_index = parent_index;
+		if (on_main_thread) active_index = parent_index;
 	}
 
 	u64 index = 0;
@@ -63,6 +68,7 @@ struct TimeScope {
 	const char* name = 0;
 	u64 start = 0;
 	u64 inclusive_start = 0;
+	b32 on_main_thread = FALSE;
 };
 
 #endif
@@ -84,8 +90,12 @@ void time_program_end_and_print()
 	for (u64 i = 1; i < TOTAL_TIMEINFOS; ++i) {
 		if (!time_infos[i].name) continue;
 		f64 pct = (time_infos[i].inclusive_time / (f64)program_time)*100.0;
-		f64 exclusive_pct = (time_infos[i].exclusive_time / (f64)program_time)*100.0;
-		printf("%s[%llu] %llu (%.2f%%), exclusive %llu (%.2f%%)", time_infos[i].name, time_infos[i].count, time_infos[i].inclusive_time, pct, time_infos[i].exclusive_time, exclusive_pct);
+		if (time_infos[i].on_main_thread) {
+			f64 exclusive_pct = (time_infos[i].exclusive_time / (f64)program_time)*100.0;
+			printf("%s[%llu] %llu (%.2f%%), exclusive %llu (%.2f%%)", time_infos[i].name, time_infos[i].count, time_infos[i].inclusive_time, pct, time_infos[i].exclusive_time, exclusive_pct);
+		} else {
+			printf("%s[%llu] %llu (%.2f%%) -- no exclusive timings on worker thread.", time_infos[i].name, time_infos[i].count, time_infos[i].inclusive_time, pct);
+		}
 		if (time_infos[i].byte_count > 0) {
 			f64 megabyte = 1024.0*1024.0;
 			f64 gigabyte = megabyte*1024.0;
