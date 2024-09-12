@@ -36,6 +36,10 @@ Bytes read_entire_file(const char* file_path, bool add_null_term)
         bytes.size++;
     }
     bytes.buffer = (u8*)malloc(bytes.size);
+
+    for (u64 i = 0; i < bytes.size; i += 4*1024) {
+        bytes.buffer[i] = i % (1 << 8);
+    }
     
     {
         TIME_BANDWIDTH("fread", read_size);
@@ -51,6 +55,12 @@ Bytes read_entire_file(const char* file_path, bool add_null_term)
     return bytes;
 }
 
+BytesChunks stream_file_chunks(const char* file_path, bool add_null_term)
+{
+    //TODO
+    return {};
+}
+
 void compare_results(HaversineResult result, HaversineResult reference_result) {
     // For now, just compare number processed and resultant average
     if (result.count == reference_result.count) {
@@ -59,8 +69,9 @@ void compare_results(HaversineResult result, HaversineResult reference_result) {
         printf("Processed %d calculations.\nExpected to process %d calculations.\nERROR!\n", (s32)result.count, (s32)reference_result.count);
     }
 
-    if (result.average == reference_result.average) {
-        printf("Result was %.17g, as expected.\n", result.average);
+    f64 delta = abs(result.average - reference_result.average);
+    if (delta < 1e-6) {
+        printf("Result was within tolerance of %.17g, as expected.\nDelta was %.17g.\n", reference_result.average, delta);
     } else {
         printf("Result was %.17g.\nExpected result was %.17g.\nERROR!\n", result.average, reference_result.average);
     }
@@ -76,6 +87,7 @@ HaversineResult get_reference_results(const char* file_name)
 
 s32 main(int arg_count, char** args)
 {
+    initialize_metrics();
     time_program_start();
 
     // Parse json
@@ -85,14 +97,14 @@ s32 main(int arg_count, char** args)
     // Calculate haversines
     HaversineResult result = calculate_haversine(data);
 
+    // Output timing information - ignore the extra work done to verify the results.
+    time_program_end_and_print();
+
     // Parse reference results
     HaversineResult reference_result = get_reference_results("../data/result_10000000.b");
 
     // Compare calculated results with reference results and output
     compare_results(result, reference_result);
-
-    // Output timing information
-    time_program_end_and_print();
 
     return 0;
 }

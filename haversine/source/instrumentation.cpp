@@ -1,3 +1,5 @@
+#include "../../common/helpful.h"
+
 // Should call time_program_start() at start of program and time_program_end_and_print() at end. Then use TIME_FUNCTION / TimeScope in between as required.
 static u64 program_start = 0;
 
@@ -73,7 +75,6 @@ void time_program_start()
 void time_program_end_and_print()
 {
 	u64 program_time = read_cpu_timer() - program_start;
-	program_start = 0;
 
     u64 cpu_freq = guess_cpu_freq(100);
     f64 total_ms = (program_time/(f64)cpu_freq)*1000.0;

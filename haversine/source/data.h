@@ -1,4 +1,8 @@
 
+struct BytesChunks {
+    //TODO
+};
+
 struct HaversineData {
     f64* x0 = 0;
     f64* y0 = 0;
