@@ -1,0 +1,10 @@
+
+Total time: 5907.7889ms (CPU freq 2496056520)
+fread[496] 353632093 (2.40%) -- WORKER THREAD. 992.00mb at 6.84gb/s
+calculate_haversine[1] 524001743 (3.55%), exclusive 524001743 (3.55%) 305.18mb at 1.42gb/s
+get_points_array[1] 14220284728 (96.43%), exclusive 14220030219 (96.43%) 991.86mb at 0.17gb/s
+chunk_synchronization[496] 254509 (0.00%), exclusive 254509 (0.00%)
+
+Processed 10000000 calculations, as expected.
+Result was within tolerance of 8600.2131016959556, as expected.
+Delta was 5.0931703299283981e-10.
