@@ -52,11 +52,11 @@ unsigned long thread_file_read(void* bytes_chunks_param)
     while (!read_complete) {
         // Until we have read all chunks of file, we wait for the next buffer to become available and perform the read when it is.
         if (next0) {
-            while (!*(chunks->buffer0_complete)) Sleep(0);
+            while (!*(chunks->buffer0_complete));
             buffer = chunks->buffer0;
             complete_marker = chunks->buffer0_complete;
         } else {
-            while (!(*chunks->buffer1_complete)) Sleep(0);
+            while (!(*chunks->buffer1_complete));
             buffer = chunks->buffer1;
             complete_marker = chunks->buffer1_complete;
         }

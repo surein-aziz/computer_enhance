@@ -94,7 +94,7 @@ void time_program_end_and_print()
 			f64 exclusive_pct = (time_infos[i].exclusive_time / (f64)program_time)*100.0;
 			printf("%s[%llu] %llu (%.2f%%), exclusive %llu (%.2f%%)", time_infos[i].name, time_infos[i].count, time_infos[i].inclusive_time, pct, time_infos[i].exclusive_time, exclusive_pct);
 		} else {
-			printf("%s[%llu] %llu (%.2f%%) -- no exclusive timings on worker thread.", time_infos[i].name, time_infos[i].count, time_infos[i].inclusive_time, pct);
+			printf("%s[%llu] %llu (%.2f%%) -- WORKER THREAD.", time_infos[i].name, time_infos[i].count, time_infos[i].inclusive_time, pct);
 		}
 		if (time_infos[i].byte_count > 0) {
 			f64 megabyte = 1024.0*1024.0;
