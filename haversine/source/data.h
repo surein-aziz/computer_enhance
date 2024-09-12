@@ -1,6 +1,15 @@
 
 struct BytesChunks {
-    //TODO
+    uintptr file = 0;
+    u64 file_size = 0;
+    u64 file_cursor = 0;
+    u64 chunk_size = 0;
+    u64 extra_size = 0;
+
+    u8* buffer0 = 0;
+    u8* buffer1 = 0;
+    b32 buffer0_complete = 0;
+    b32 buffer1_complete = 0;
 };
 
 struct HaversineData {

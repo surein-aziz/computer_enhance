@@ -11,45 +11,9 @@
 // Single unit compilation
 #include "../../common/platform_metrics.cpp"
 #include "instrumentation.cpp"
+#include "file_io.cpp"
 #include "reference_haversine.cpp"
 #include "reference_parser.cpp"
-
-void write_entire_file(Bytes bytes, const char* file_path)
-{
-    FILE* file = fopen(file_path, "wb");
-    Assert(file);
-    u64 written = fwrite(bytes.buffer, 1, bytes.size, file);
-    Assert(written == bytes.size);
-    fclose(file);
-}
-
-Bytes read_entire_file(const char* file_path)
-{
-    Bytes bytes;
-    
-    FILE* file = fopen(file_path, "rb");
-    fseek(file, 0, SEEK_END);
-    
-    bytes.size = ftell(file);
-    s32 read_size = bytes.size;
-    bytes.buffer = (u8*)malloc(bytes.size);
-    
-    {
-        TIME_BANDWIDTH("fread", read_size);
-
-        fseek(file, 0, SEEK_SET);
-        fread(bytes.buffer, 1, read_size, file);
-        fclose(file);
-    }
-
-    return bytes;
-}
-
-BytesChunks stream_file_chunks(const char* file_path, bool add_null_term)
-{
-    //TODO
-    return {};
-}
 
 void compare_results(HaversineResult result, HaversineResult reference_result) {
     // For now, just compare number processed and resultant average
@@ -81,8 +45,8 @@ int main()
     time_program_start();
 
     // Parse json
-    Bytes json = read_entire_file("../data/data_10000000.json");
-    HaversineData data = parse_haversine_json(json);
+    BytesChunks json_chunks = begin_file_read_chunks("../data/data_10000000.json", 1024*1024, 1024);
+    HaversineData data = parse_haversine_json(json_chunks);
 
     // Calculate haversines
     HaversineResult result = calculate_haversine(data);
