@@ -1,15 +1,28 @@
 
 struct BytesChunks {
-    uintptr file = 0;
-    u64 file_size = 0;
-    u64 file_cursor = 0;
+    const char* file_path = 0;
     u64 chunk_size = 0;
     u64 extra_size = 0;
 
     u8* buffer0 = 0;
     u8* buffer1 = 0;
-    b32 buffer0_complete = 0;
-    b32 buffer1_complete = 0;
+    volatile b32 buffer0_complete = 0;
+    volatile b32 buffer1_complete = 0;
+    volatile b32 no_more_chunks = FALSE;
+    volatile u64 file_size = 0;
+};
+
+struct FileReadData {
+    unsigned long thread_id = 0;
+    u8* buffer0 = 0;
+    u8* buffer1 = 0;
+    volatile b32* buffer0_complete = 0;
+    volatile b32* buffer1_complete = 0;
+    volatile b32* no_more_chunks = 0;
+    volatile u64* file_size = 0;
+
+    u64 chunk_size = 0;
+    u64 extra_size = 0;
 };
 
 struct HaversineData {

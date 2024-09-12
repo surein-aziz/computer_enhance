@@ -45,8 +45,8 @@ int main()
     time_program_start();
 
     // Parse json
-    BytesChunks json_chunks = begin_file_read_chunks("../data/data_10000000.json", 2*1024*1024, 1024);
-    HaversineData data = parse_haversine_json(json_chunks);
+    FileReadData json_data = begin_file_read_chunks("../data/data_10000000.json", 2*1024*1024, 1024);
+    HaversineData data = parse_haversine_json(json_data);
 
     // Calculate haversines
     HaversineResult result = calculate_haversine(data);
