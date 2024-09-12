@@ -70,13 +70,13 @@ HaversineData get_points_array(BytesChunks chunks, char* json, u64 cursor) {
             if (chunks.file_cursor >= chunks.file_size) {
                 final_chunk = TRUE;
             } else {
-                // Read next chunk.
+                // Queue read of next chunk.
                 if (current_buffer0) {
                     chunks.buffer0_complete = TRUE;
-                    read_chunk(&chunks, TRUE);
+                    chunks.file_cursor = queue_chunk_read(chunks.file, chunks.file_size, chunks.file_cursor, chunks.chunk_size, chunks.extra_size, chunks.buffer0, &chunks.buffer0_complete);
                 } else {
                     chunks.buffer1_complete = TRUE;
-                    read_chunk(&chunks, FALSE);
+                    chunks.file_cursor = queue_chunk_read(chunks.file, chunks.file_size, chunks.file_cursor, chunks.chunk_size, chunks.extra_size, chunks.buffer1, &chunks.buffer1_complete);
                 }
             }
             current_buffer0 = !current_buffer0;
