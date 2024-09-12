@@ -52,11 +52,11 @@ unsigned long thread_file_read(void* bytes_chunks_param)
     while (!read_complete) {
         // Until we have read all chunks of file, we wait for the next buffer to become available and perform the read when it is.
         if (next0) {
-            while (!chunks->buffer0_complete) Sleep(10);
+            while (!chunks->buffer0_complete) Sleep(1);
             buffer = chunks->buffer0;
             complete_marker = &chunks->buffer0_complete;
         } else {
-            while (!chunks->buffer1_complete) Sleep(10);
+            while (!chunks->buffer1_complete) Sleep(1);
             buffer = chunks->buffer0;
             complete_marker = &chunks->buffer0_complete;
         }
@@ -75,9 +75,11 @@ unsigned long thread_file_read(void* bytes_chunks_param)
             }
             fread(buffer + chunks->extra_size, 1, read_size, file);
             MemoryBarrier();
-            *complete_marker = FALSE;
+            while (InterlockedCompareExchange((long*)complete_marker, FALSE, TRUE) != FALSE);
             MemoryBarrier();
-            if (file_cursor + read_size > chunks->file_size) chunks->no_more_chunks = TRUE;
+            if (file_cursor + read_size > chunks->file_size) {
+                while (InterlockedCompareExchange((long*)&chunks->no_more_chunks, TRUE, FALSE) != TRUE);
+            }
             MemoryBarrier();
             file_cursor += read_size;
         }
