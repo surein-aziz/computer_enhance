@@ -95,6 +95,7 @@ s32 main(int arg_count, char** args)
 
     // Output timing information - ignore the extra work done to verify the results.
     time_program_end_and_print();
+    printf("\n");
 
     // Parse reference results
     HaversineResult reference_result = get_reference_results("../data/result_10000000.b");
