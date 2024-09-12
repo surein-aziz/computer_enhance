@@ -36,10 +36,6 @@ Bytes read_entire_file(const char* file_path, bool add_null_term)
         bytes.size++;
     }
     bytes.buffer = (u8*)malloc(bytes.size);
-
-    for (u64 i = 0; i < bytes.size; i += 4*1024) {
-        bytes.buffer[i] = i % (1 << 8);
-    }
     
     {
         TIME_BANDWIDTH("fread", read_size);
